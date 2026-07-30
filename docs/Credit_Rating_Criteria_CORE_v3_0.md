@@ -84,15 +84,22 @@ The output is explicitly indicative and academic. It supports an internal, pre-a
 
 *Applied after the 115-point score (Section 7 — not part of the 115): Offtaker/Counterparty Risk (graded notch plus band cap), Refinancing Risk, Construction and Ramp-up Risk. Band caps, including the coverage floor, are applied per Section 8.2.*
 
-**Non-overlap map.** Each of the following risks is scored in exactly one place, and nowhere else:
+**Non-overlap map.** Each of the following risks is scored in exactly one place, **except where this table states otherwise and gives the reason**. A stated exception is a design decision; an unstated overlap is a defect.
 
-| Risk | Scored only at |
-| --- | --- |
-| Offtaker / counterparty credit quality | Section 7.1 |
-| Construction and ramp-up status | Section 7.3 |
-| Refinancing / bullet exposure | Section 7.2 |
-| Liquidity and reserve cover | Section 5.3 |
-| Merchant / uncontracted revenue exposure | Section 3.2.1, and as the merchant adjustment to Section 4 thresholds |
+| Risk | Scored at | Single place? |
+| --- | --- | --- |
+| Offtaker / counterparty credit quality | Section 7.1 | Yes — and nowhere in Block A |
+| Construction and ramp-up status | Section 7.3 | Yes — and nowhere in Block A |
+| Refinancing / bullet exposure | Section 7.2 | Yes |
+| Liquidity and reserve cover | Section 5.3 | **No — stated exception**, see Section 9.7 |
+| Merchant / uncontracted revenue exposure | Section 3.2.1 **and** the Section 4.0 merchant adjustment | **No — stated exception**, see below |
+| Interest-rate / FX hedging | Section 6.3 **and** Section 7.2 mitigant 3 | **No — stated exception**, see below |
+
+*Corrected in v3.0. The v2.0 map opened "scored in exactly one place, and nowhere else" and then gave two places on its final row, so it broke its own rule in its own last line. Two further overlaps were not listed at all. The map now distinguishes genuine single-placement from declared exceptions, and every exception carries its reasoning.*
+
+**Stated exception — merchant exposure at Section 3.2.1 and Section 4.0.** These ask different questions about the same fact. Section 3.2.1 scores **how much** revenue is contracted and for how long: a business-risk measure, worth up to 8 points. Section 4.0 does not score anything; it **raises the coverage bar** the cash flow must clear, by 0.20x on every DSCR tier threshold, because a given DSCR built on merchant revenue is less reliable than the same DSCR built on contracted revenue. One measures the quantity of contracted revenue; the other adjusts the confidence attached to a coverage ratio. A project with heavy merchant exposure is therefore affected twice, and that is intended: the exposure is both a weaker business position and a reason to demand more headroom.
+
+**Stated exception — hedging at Section 6.3 and Section 7.2.** Section 6.3 asks whether an interest-rate/FX hedging **policy exists**, as one of three structural-protection items. Section 7.2 mitigant 3 asks whether a hedge **covers at least 75% of floating-rate exposure to final maturity**, as one of four possible mitigants against refinancing risk. The second is a materially higher test than the first: a project can have a policy and still fail the 75%-to-maturity test. The two are recorded as separate fields — `hedging_policy` and `mitigant_ir_hedge` — precisely so that the engine cannot infer one from the other, and Section 7.2 requires only **one** of four mitigants, so the hedge answer is frequently not decisive there. The overlap is narrow and deliberate, but it is an overlap and is declared here rather than left for an implementer to discover.
 
 # 3. Block A — Business / Operating Risk (35 points)
 
@@ -487,7 +494,7 @@ Where this document, the Execution Manual, or any output uses "notch" in the con
 
 *Resolved in v3.0 (QA finding m5). The mechanic keeps the name "notch" because "post-notching score" is embedded in the order of operations, the Results screen specification and the engine's return object, and renaming it would cost more clarity than it bought. The ambiguity is resolved where it actually caused harm — at the point of comparison.*
 
-A risk already scored inside Blocks A–D is not also notched here, and vice versa. See the non-overlap map at Section 2 and the rule at Section 9.7.
+A risk already scored inside Blocks A–D is not also notched here, and vice versa, **save for the exceptions declared in the non-overlap map at Section 2**. One such exception falls in this section: hedging is assessed both at Section 6.3, as the existence of a policy, and at Section 7.2 mitigant 3, at the materially higher test of 75% coverage to maturity. See Section 2 for the reasoning and Section 9.7 for the liquidity exception.
 
 ## 7.1 Offtaker / Counterparty Risk — Graded Notch and Band Cap
 
@@ -828,7 +835,7 @@ Where any of the following is null, the engine returns **“****Insufficient Inp
 
 - `calculation_date` (Template 1 §A.1) — required for V11 and for every remaining-tenor and as-of-date computation. *Added in v3.0 (QA finding m19): v2.0 omitted it, although V11 is a Block rule that cannot run without it.*
 
-- `dscr_schedule[]`, or a directly entered Minimum DSCR (Template 2)
+- `dscr_schedule[]`, **or** a directly entered `minimum_dscr` (Template 2). Either route satisfies the requirement; see Appendix B note 1 for how the two interact.
 
 - `p90_plf`, **together with all three attestation fields** — `p90_attestation_basis`, `p90_resource_study`, `p90_preparer` — per Section 9.5
 
@@ -926,7 +933,7 @@ Where more than one row’s conditions are met, the **lowest** applicable confid
 
 **Not Evaluated does not itself reduce confidence.** The null that caused it already reduces confidence through Section 9.8.3's null count, and counting the same missing field twice would double-penalise it. A Not Evaluated result is displayed on the Results screen alongside the Null Register entry that explains it, so the reader can see which check was not performed and why.
 
-*Worked example. A project supplies Minimum DSCR but not Average DSCR. Stage 1 passes — the DSCR schedule is present, so the critical input is satisfied. Stage 2 scores Section 4.2 at 0 and registers `avg_dscr` in the Null Register, 8 points forgone. Stage 3 returns V1 = **Not Evaluated**. Stage 4 scores the project, 8 points short. Confidence is at most **Moderate**, on the single non-critical null. The project receives a band, the reader can see exactly what was missing and what it cost, and no implementer had to choose between two readings.*
+*Worked example. A project supplies Minimum DSCR but not Average DSCR. Stage 1 passes — the DSCR schedule is present, so the critical input is satisfied. Stage 2 scores Section 4.2 at 0 and registers `average_dscr` in the Null Register, 8 points forgone. Stage 3 returns V1 = **Not Evaluated**. Stage 4 scores the project, 8 points short. Confidence is at most **Moderate**, on the single non-critical null. The project receives a band, the reader can see exactly what was missing and what it cost, and no implementer had to choose between two readings.*
 
 ## 10.2 Required inputs by block
 
@@ -1100,6 +1107,19 @@ Sections 3.1, 3.2, 3.3.1, 3.3.2, 3.5 and 3.6 are scored from enumerated input se
 | m17 | `execution_complexity` added to Section 7.3 row 3's qualifying conditions. |
 | m18 | Section 3.6 limb conditions made mutually exclusive and exhaustive. |
 | m19 | `calculation_date` marked critical and added to Section 9.8.1. |
+
+### 13.0.4 Post-issue sanity check, 30 July 2026 (within v3.0)
+
+*A structural self-check was run over this document after issue: block and sub-factor arithmetic, cross-reference resolution, enumeration and field-dictionary completeness, and a search for undeclared double counting. Arithmetic and cross-references passed unchanged — sub-factors sum to 35 / 35 / 25 / 20 and 115, and all 62 cited sections resolve to real headings. Four defects were found and are corrected within v3.0. None alters a score.*
+
+| # | Defect | Correction |
+| --- | --- | --- |
+| S1 | The **non-overlap map contradicted itself**: it opened "scored in exactly one place, and nowhere else" and its own final row then named two places. Two further overlaps — liquidity, and hedging — were not listed at all. | The map now distinguishes single placement from **declared exceptions**, lists all three overlaps, and gives the reasoning for each. An unstated overlap is a defect; a stated one is a design decision. |
+| S2 | Section 7's blanket claim that "a risk already scored inside Blocks A–D is not also notched here" was **false for hedging**, which is assessed at Section 6.3 as the existence of a policy and at Section 7.2 as 75% coverage to maturity. | The claim is qualified by reference to the map, and the exception is stated where it arises. |
+| S3 | **`ATTESTED_P90` was not declared in Appendix A**, although Section 9.5 requires the engine to match on it and Appendix A claims to be the complete normative list. | Declared as `P90_BASIS_1`, a deliberately single-member enumeration, with the reason recorded. |
+| S4 | **`minimum_dscr` and `average_dscr` were absent from Appendix B**, although Section 9.8.1 names a directly entered Minimum DSCR as an alternative critical input and Section 10.1.1's worked example registered `avg_dscr` in the Null Register. The alternative route could not be represented in the JSON schema at all, and the worked example named a field nothing defined. | Both fields added, with criticality and a note governing how the schedule route and the direct-entry route interact. `avg_dscr` is recorded as an informal abbreviation, not a field name. |
+
+*S4 is the same class as QA finding M11 — a criteria rule depending on a field no template collects — and would have surfaced on Day 1, when the JSON schema is written from Appendix B.*
 
 # 13.1 Change Log — v1.0 to v2.0
 
@@ -1316,6 +1336,14 @@ Downstream references to Section 9 must be updated. The engine, both templates, 
 | `OFFTAKER_TYPE_2` | `OFFTAKER_CI` (Commercial & Industrial) · `OFFTAKER_DISCOM` |
 | `COUNTERPARTY_4` | `CP_STRONG` · `CP_ADEQUATE` · `CP_WEAK` · `CP_POOR_UNRATED` |
 
+### P90_BASIS_1 — Basis of the CFADS schedule (§9.5)
+
+| Code | Display string |
+| --- | --- |
+| `ATTESTED_P90` | Attested as P90 |
+
+**A single-member enumeration, deliberately.** v2.0 offered a second option — derivation of CFADS from the entered P90 PLF — which Template 2 never implemented (QA finding B5). Route (a) is withdrawn, so exactly one value is permitted, and `p90_attestation_basis` is in effect a constant. It is declared here rather than left in Section 9.5 prose because Appendix A is the list the engine matches on, and a value the engine must match on belongs in it. Any other value, including a blank, makes `p90_plf` a null critical input (Section 9.8.1).
+
 ### TREATMENT_2 — Instrument equity-treatment classification (§9.3)
 
 | Code | Display string |
@@ -1410,7 +1438,9 @@ Downstream references to Section 9 must be updated. The engine, both templates, 
 | `p90_attestation_basis` | const `ATTESTED_P90` | — | **Yes** | T2 §B3 | §9.5 |
 | `p90_resource_study` | string | — | **Yes** | T2 §B3 | §9.5 |
 | `p90_preparer` | string | — | **Yes** | T2 §B3 | §9.5 |
-| `dscr_schedule[]` | array | — | **Yes** | T2 §B1 | §4.1, §4.2, §9.2.1 |
+| `dscr_schedule[]` | array | — | **Yes**¹ | T2 §B1 | §4.1, §4.2, §9.2.1 |
+| `minimum_dscr` | number | x | **Yes**¹ | T2 §B2 | §4.1, §8.3 coverage floor, V1, V8, V8a |
+| `average_dscr` | number | x | | T2 §B2 | §4.2, V1 |
 | `dscr_schedule[].debt_year` | integer | — | | T2 §B1 | ordering |
 | `dscr_schedule[].cfads` | number | currency | | T2 §B1 | §9.1 |
 | `dscr_schedule[].interest` | number | currency | | T2 §B1 | DSCR denominator |
@@ -1423,6 +1453,10 @@ Downstream references to Section 9 must be updated. The engine, both templates, 
 | `remaining_project_life_years` | number | years | | T2 §B5 | V2 |
 | `remaining_loan_life_years` | number | years | | T2 §B5 | V2 |
 | `principal_outstanding_senior` | number | currency | | T2 §B5 | §4.3, §4.4 denominator |
+
+¹ **The critical requirement is satisfied by either route, not both.** Section 9.8.1 requires `dscr_schedule[]` **or** a directly entered `minimum_dscr`. Where the schedule is supplied, `minimum_dscr` and `average_dscr` are **derived** from it and must not also be entered — validation rule V13's principle applies, and a supplied value that disagrees with the schedule is a Block. Where only `minimum_dscr` is entered, Section 4.2 has no operand, `average_dscr` is a non-critical null scoring 0 with a Null Register entry, and V1 returns `Not Evaluated` (Section 10.1.1).
+
+*Added in v3.0. Section 9.8.1 named the direct-entry route as an alternative critical input and Section 10.1.1's worked example registered `avg_dscr` in the Null Register, but neither field appeared in this dictionary — so the alternative route could not be represented in the JSON schema at all, and the worked example named a field nothing defined. Note the canonical names are `minimum_dscr` and `average_dscr`; `avg_dscr` was an informal abbreviation and is not a field name.*
 
 ## 15.4 Block C — Financial Strength
 
