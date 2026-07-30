@@ -1,0 +1,43 @@
+# ---- secrets: never commit ----
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+serviceAccountKey.json
+firebase-adminsdk*.json
+gcp-credentials*.json
+
+# ---- reference corpus: 126 MB of published agency documents ----
+# Deliberately not committed. Resolve through corpus/Reference_Corpus_Manifest_v3_0.csv
+# and verify a local copy with:
+#   python corpus/corpus_manifest.py --corpus corpus --verify \
+#          --manifest corpus/Reference_Corpus_Manifest_v3_0.csv
+corpus/*.pdf
+corpus/_quarantine/
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.coverage
+
+# ---- Node / Firebase front-end ----
+node_modules/
+.firebase/
+firebase-debug.log
+dist/
+build/
+
+# ---- Office lock files ----
+~$*.docx
+~$*.xlsx
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
