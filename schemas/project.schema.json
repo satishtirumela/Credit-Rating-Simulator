@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ProjectInput",
+  "description": "JSON Schema for Credit Rating Simulator Project Inputs (CORE v3.0 Appendix A & B)",
+  "type": "object",
+  "required": [
+    "technology_type",
+    "project_status",
+    "cod_date",
+    "calculation_date",
+    "contracted_revenue_share",
+    "p90_plf",
+    "p90_attestation_basis",
+    "p90_resource_study",
+    "p90_preparer"
+  ],
+  "properties": {
+    "technology_type": {
+      "type": "string",
+      "enum": ["TECH_SOLAR", "TECH_WIND", "TECH_HYBRID"]
+    },
+    "project_status": {
+      "type": "string"
+    },
+    "cod_date": {
+      "type": "string"
+    },
+    "calculation_date": {
+      "type": "string"
+    },
+    "contracted_revenue_share": {
+      "type": "number"
+    },
+    "p90_plf": {
+      "type": "number"
+    },
+    "p90_attestation_basis": {
+      "type": "string"
+    },
+    "p90_resource_study": {
+      "type": "string"
+    },
+    "p90_preparer": {
+      "type": "string"
+    }
+  }
+}

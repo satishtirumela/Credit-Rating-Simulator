@@ -882,7 +882,7 @@ Where more than one row’s conditions are met, the **lowest** applicable confid
 
 ## 10.1 Internal-consistency validation rules
 
-*v1.0 specified no validation rules, so an arithmetically impossible input set would score silently. Section 10.1.1 states when these checks run relative to null resolution and scoring. A** ****Block**** **result prevents scoring; a** ****Warn**** **result proceeds and is displayed on the Results screen; a** ****Not Evaluated**** **result means at least one operand was null.*
+*v1.0 specified no validation rules, so an arithmetically impossible input set would score silently. Section 10.1.1 states when these checks run relative to null resolution and scoring. A** ****Block**** **result prevents scoring — every remaining rule is still evaluated first, so the report is complete (Section 10.1.1 Stage 3); a** ****Warn**** **result proceeds and is displayed on the Results screen; a** ****Not Evaluated**** **result means at least one operand was null.*
 
 **Input validations.** These test the submitted input set. Each runs only where every operand it needs is populated; otherwise it returns **Not Evaluated** (Section 10.1.1).
 
@@ -923,7 +923,7 @@ Where more than one row’s conditions are met, the **lowest** applicable confid
 
 - **Stage 2 — Non-critical null resolution.** Resolve every remaining null to 0 points for its sub-factor and record it in the Null Register (Section 9.8.2). The block maximum is not reduced. A `NOT_APPLICABLE_*` code is a deliberate answer, not a null.
 
-- **Stage 3 — Input validation.** Run V1 to V14. **A rule runs only where every operand it requires is populated.** Where any operand is null, the rule returns **Not Evaluated** and does not block. If any rule returns **Block**, stop and return the validation report with no score. **Warn** and **Not Evaluated** results proceed to Stage 4 and are carried into the output.
+- **Stage 3 — Input validation.** Run V1 to V14. **A rule runs only where every operand it requires is populated.** Where any operand is null, the rule returns **Not Evaluated** and does not block. If any rule returns **Block**, the engine still **evaluates every remaining rule** and returns the complete validation report, then stops without scoring — it does not halt on the first Block. *Stated in v3.0 because the wording was silent and both readings are defensible. Running on is the better of the two: the rules are mutually independent, so a Block in one tells you nothing about the others, and a user who is shown one failure at a time must correct and resubmit once per failure. The validation screen exists so that a preparer can see everything wrong with a submission in a single pass.* **Warn** and **Not Evaluated** results proceed to Stage 4 and are carried into the output.
 
 - **Stage 4 — Scoring.** Execute Section 8.1 steps 1 to 7 on the resolved input set.
 
@@ -1122,6 +1122,14 @@ Sections 3.1, 3.2, 3.3.1, 3.3.2, 3.5 and 3.6 are scored from enumerated input se
 | S4 | **`minimum_dscr` and `average_dscr` were absent from Appendix B**, although Section 9.8.1 names a directly entered Minimum DSCR as an alternative critical input and Section 10.1.1's worked example registered `avg_dscr` in the Null Register. The alternative route could not be represented in the JSON schema at all, and the worked example named a field nothing defined. | Both fields added, with criticality and a note governing how the schedule route and the direct-entry route interact. `avg_dscr` is recorded as an informal abbreviation, not a field name. |
 
 *S4 is the same class as QA finding M11 — a criteria rule depending on a field no template collects — and would have surfaced on Day 1, when the JSON schema is written from Appendix B.*
+
+### 13.0.5 Findings surfaced during implementation, 31 July 2026 (within v3.0)
+
+*Section 13.0.4 records defects found by reading this document. This section records defects found by **building from it** — which is a different test, and a harder one to pass. A specification can be internally consistent, arithmetically sound and fully cross-referenced, and still leave an implementer with a choice the author never realised they were delegating.*
+
+| # | Gap | Resolution |
+| --- | --- | --- |
+| S5 | **Section 10.1.1 Stage 3 was silent on whether a Block halts evaluation of the remaining rules.** Both readings were defensible, so the implementer had to choose — and chose to halt on the first Block, which returns an incomplete validation report. | **All rules are evaluated, then the pipeline stops without scoring.** The rules are mutually independent, so a Block in one says nothing about the others, and a preparer shown one failure at a time must correct and resubmit once per failure. TP-8's expected output is restated as the full thirteen-rule report. |
 
 # 13.1 Change Log — v1.0 to v2.0
 

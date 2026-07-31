@@ -1161,7 +1161,7 @@
     "CONFIDENCE": "n/a \u2014 no result",
     "Confidence reason": "Validation Block \u2014 no band issued",
     "Stage at which the pipeline terminates": "STAGE 3 \u2014 V1 Block. Average DSCR 1.1000 < Minimum DSCR 1.2000. Validation report returned; no score.",
-    "Validation results carried into the output": "V1 BLOCK"
+    "Validation results carried into the output": "V1 Block (Average DSCR 1.1000 < Minimum DSCR 1.2000). All 13 rules evaluated: 1 Block, 11 Pass, 1 Not Evaluated (V6 \u2014 no NCA series supplied). No other rule blocks."
    }
   }
  ]
