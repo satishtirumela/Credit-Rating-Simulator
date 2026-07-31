@@ -262,13 +262,15 @@ Each activity below states its purpose, the tool, exact steps, the output you sh
 
 **Steps —**
 
-- Start from CORE Section 10.2 (Required Inputs by Block) — it lists every input needed per block. Ask Claude: ‘Draft a JSON schema for a renewable project using exactly these fields from CORE Section 10.2 …’ and paste that section.
+- **Start from CORE Appendix B (Section 15), not Section 10.2.** Section 10.2 describes the required inputs in prose, block by block; **Appendix B is the normative field dictionary** and gives every field's name, type, unit, criticality and governing template. Section 10.2.1 says so explicitly. Generate the schema from Appendix B rather than transcribing it — transcription is how a schema and its criteria drift apart, which is the defect class behind QA findings M8 and M10.
 
-- Keep field names simple and consistent (e.g. min_dscr, avg_dscr, gearing, offtaker_type, offtaker_rating).
+- **Every percentage in the schema is a decimal fraction** — 0.9700 for 97%. No field carries a value out of 100 (CORE §9.6); Appendix B marks these `frac`. Note that `frac` does **not** imply an upper bound of 1: a share cannot exceed 1, but `actual_gen_vs_p90_*` legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate.
 
-- Implement the **five canonical enumerations** at CORE §10.3 — TIER_5, TIER_4, LIQUIDITY_5, PRESENCE_4, COUNTERPARTY_4 — and no others. v1.0 used six overlapping tier vocabularies, each of which would have become a separate enum; v2.0 harmonises them, so build the schema against the canonical set rather than transcribing table headings.
+- **Take every field name from CORE Appendix B. Do not invent, abbreviate or paraphrase one.** *v2.0 of this manual offered `min_dscr, avg_dscr, gearing, offtaker_type, offtaker_rating` as examples and left the other ninety-odd names to be chosen at build time — which is QA finding M8. Worse, four of those five are **wrong** against Appendix B: the canonical names are `minimum_dscr`, `average_dscr`, `offtakers[].type` and `offtakers[].rating_or_grade`, and gearing is not an input at all but a value derived from `total_debt` and `tangible_net_worth`. `avg_dscr` is expressly recorded at Appendix B as an informal abbreviation and not a field name.* If a field you need is not in Appendix B, stop and raise it — do not coin one.
 
-- Type the **enumerated Block A inputs** as strict enums matching the exact option strings in Template 1 v2.0 §A.2, §A.4, §A.5, §A.6 and §N.8. These fields carry 25 of the 115 points and were free-form narrative in v1.0; the schema must reject an unmatched string rather than accept it.
+- **Implement every enumeration in CORE Appendix A — twenty-seven of them — and no others.** *v2.0 of this manual named five and said "and no others". Two things are wrong with that. **`TIER_4` is withdrawn** in v3.0 (QA finding m6): it was declared as applying to Sections 3.3.1 and 3.4, neither of which carries a tier label, so it had no site of use and would have become a dead type in the schema. And the five named were **output vocabularies only** — the twenty-odd **input** enumerations that actually constrain what a user may submit (`TECH_3`, `COMP_POS_5`, `PERMIT_3`, `ALMM_5`, `YNNA_3`, `TREATMENT_2` and the rest) were not mentioned at all, so a schema built to that bullet would have left every scored input as free text.* The output vocabularies are at Appendix A §14.2; the input enumerations are at §14.1. Both are normative.
+
+- **Type every enumerated input as a strict enum of Appendix A CODES.** These fields carry 25 of the 115 points and were free-form narrative in v1.0; the schema must reject an unmatched value rather than accept it, and an input that does not resolve to a listed code is a **null**, not a coerced nearest match. *v2.0 of this manual said to match "the exact option strings in Template 1". That bullet **is** QA finding M10: display strings differed between CORE and Template 1 for the same option, the Manual made Template 1 authoritative while CORE claimed to be the single source of truth, and any later rewording of a display string would have silently broken the schema. Match on `TECH_SOLAR`, never on "Solar PV".*
 
 - Model the offtaker array as **up to four individual counterparties plus one aggregated line** (Template 1 §N.2–N.6), each with type (C&I vs DISCOM), contracted revenue share, and current published rating or grade with edition and date. A missing or superseded edition/date is flagged stale per CORE §9.9, not silently applied.
 
@@ -276,11 +278,15 @@ Each activity below states its purpose, the tool, exact steps, the output you sh
 
 - Model the DSRA as **total balance plus encumbered portion** as two separate fields, so the partial-encumbrance rule at CORE §5.3 can exclude the encumbered part and score the remainder.
 
-- Add a **P90 attestation object** — either the derivation inputs or the preparer attestation required by CORE §9.5. Block B cannot be scored without one.
+- **Add a P90 attestation object carrying all four fields** — `p90_plf`, `p90_attestation_basis` (the single permitted value `ATTESTED_P90`), `p90_resource_study` and `p90_preparer`. All four are critical: a blank in any one makes `p90_plf` a null critical input, and the pipeline stops at Stage 1 with "Insufficient Input — Not Rated". *v2.0 of this manual offered "either the derivation inputs or the preparer attestation". **The derivation route is withdrawn** (QA finding B5): Template 2 never implemented it, no formula ever linked the entered P90 PLF to the CFADS schedule, and the workbook's status cell returned "Satisfied" for any string at all. Attestation is now the only route.*
 
 - Add the **Null Register** as a first-class output structure (CORE §9.8.2): field name, sub-factor affected, points forgone.
 
-- Encode the twelve **validation rules** at CORE §10.1, each carrying its Block-or-Warn classification, as schema-level or pre-scoring checks. A Block failure must stop the pipeline before scoring, not produce a flagged score.
+- **Encode the thirteen input validation rules V1–V14 at CORE §10.1** — there is no V4, V5 or V10, which became engine assertions — each carrying its classification, positioned per §10.1.1 Stage 3. **There are four outcomes, not two: Pass, Warn, Block and `Not Evaluated`.** A rule runs only where every operand it needs is populated; otherwise it returns `Not Evaluated`, does not block, and does not itself reduce confidence, because the underlying null already does.
+
+- **Keep the four engine assertions A1–A4 out of the schema and off the user-facing validation screen.** They test the engine's own arithmetic rather than the submitted data, so a failure is an implementation defect that must halt the response, not appear as something a user could correct. *v2.0 of this manual said "twelve validation rules… Block-or-Warn" with A1–A3 mixed in among them (QA finding m7).*
+
+- **A Block failure stops the pipeline before scoring — and critical nulls stop it earlier still.** Stage 1 resolves critical nulls and returns "Insufficient Input — Not Rated" before any validation rule runs at all (§10.1.1, QA finding B6).
 
 - Save the schema alongside CORE, not as a replacement for it.
 
@@ -977,6 +983,7 @@ Run these confirmations as you go. If any fails, fix it before moving on.
 | **M8, M10** | Activity 1.2 now directs the developer to **CORE Appendices A and B** before writing the schema, and states that the engine matches on **code**, never on display text. v2.0 gave four illustrative field names in prose, left the other ninety-odd to be invented at build time, and simultaneously made Template 1's option strings authoritative while CORE claimed to be the single source of truth. | 1.2 |
 | **B7** | The schema convention is stated explicitly: **every percentage is a decimal fraction**, 0.9700 for 97%, no field out of 100. | 1.2 |
 | **m1** | Corpus counts stated consistently — 42 files as assembled, 41 after the Fitch duplicate is quarantined — and Activity 3.1's validation criteria extended to require that `corpus_manifest.py --verify` returns PASS, so a container mismatch or a hash mismatch stops the build rather than being discovered during grounding. | 3.1 |
+| **1.2 sweep** | Six further bullets in Activity 1.2 corrected against v3.0: start from **Appendix B**, not §10.2 prose; take field names from Appendix B rather than the four wrong examples v2.0 offered (`avg_dscr` is not a field name); implement **all 27** Appendix A enumerations, not five, and `TIER_4` is withdrawn; match on **code**, not Template 1 display strings; the P90 **derivation route is withdrawn**; and there are **thirteen** V-rules plus four assertions with **four** outcomes, not twelve rules with two. Every one of these would have put a defect into the schema on Day 1. | 1.2 |
 | **m11** | Companion documents are cited by **title and version** throughout, never by filename. Section 12 of CORE records why filenames in this project are not stable identifiers; that rule now applies to this manual's own cross-references. | throughout |
 
 # Appendix — Ready-to-use prompts

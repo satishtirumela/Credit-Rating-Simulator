@@ -1355,12 +1355,14 @@ Downstream references to Section 9 must be updated. The engine, both templates, 
 
 ## 14.2 Output enumerations
 
+*Where an enumeration appears in both §14.1 and this table, §14.1 governs and this table is a cross-reference only. `COUNTERPARTY_4` was declared twice with different member sets — codes at §14.1, display words here — in an appendix that requires matching on code. Corrected: one name, one member set.*
+
 | Enumeration | Members | Used at |
 | --- | --- | --- |
 | `TIER_5` | Full, Strong, Adequate, Weak, Deficient | 4.1, 4.2, 4.3, 4.4, 5.1, 5.2 |
 | `LIQUIDITY_5` | Superior, Strong, Adequate, Stretched, Poor | 5.3 |
 | `PRESENCE_4` | Full, Partial, Minimal, Absent | 6.1, 6.2, 6.3 |
-| `COUNTERPARTY_4` | Strong, Adequate, Weak, Poor/Unrated | 7.1 |
+| `COUNTERPARTY_4` | **Declared at §14.1 above** — `CP_STRONG` · `CP_ADEQUATE` · `CP_WEAK` · `CP_POOR_UNRATED`. It is both an input enumeration (Template 1 §N.6, the user-supplied aggregated tier) and an output vocabulary (§7.1 Step 1). **One enumeration, one member set.** | 7.1 |
 | `BAND_8` | AAA, AA, A, BBB, BB, B, C, D | 8.2 |
 | `CONFIDENCE_4` | High, Moderate, Low, Not Rated | 9.8.3 |
 | `VALIDATION_4` | Pass, Warn, Block, Not Evaluated | 10.1, 10.1.1 |
