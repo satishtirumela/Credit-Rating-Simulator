@@ -11,6 +11,7 @@
 | Authoritative index | Reference Corpus Manifest v3.0 (`Reference_Corpus_Manifest_v3_0.csv`), 41 rows, 18 columns |
 | Generator and verifier | `corpus_manifest.py` v3.0 |
 | Verification state | `corpus_manifest.py --verify` returns **PASS**: 41 of 41 files resolve to a manifest row, 41 of 41 payload hashes match, 0 case-insensitive collisions |
+| Container format | **Uniform PDF, all 41 files.** Text layer verified on 660 of 661 pages. See Section 2. |
 | Owner | Developer (CA. Satish Tirumela) |
 
 ---
@@ -19,7 +20,9 @@
 
 v2.0 of this specification described a remediation that had been designed but not applied. The remediation has since been applied — by hand, under a different naming convention from the one the script targeted, and with four documents re-supplied in a different file format. Three consequences followed, none of them visible from any single document, and all three are corrected here.
 
-**(a) The corpus is no longer uniformly ZIP.** v2.0's central factual claim was that *all 42 files carrying a .pdf extension begin with the byte signature 50 4B 03 04, and none begins with %PDF.* As at 30 July 2026 that is **false for four files**. Those four are genuine PDFs. Any pipeline built on the v2.0 contract — "Open each file as a ZIP archive" — now fails on exactly those four, and fails in the way the contract was written to prevent: silently, reading as file corruption rather than as a format mismatch.
+**(a) The container format changed twice, and now it is uniform.** v2.0's central factual claim was that *all 42 files carrying a .pdf extension begin with the byte signature 50 4B 03 04, and none begins with %PDF.* That became false for four files during remediation, making the corpus **mixed**: 37 ZIP archives and 4 genuine PDFs. A pipeline built on either assumption failed silently on the other set, reading as file corruption rather than as a format mismatch.
+
+That is no longer the state. On re-download, the 37 archives were served as **real PDFs**. All 41 files now begin `%PDF`, and the mixed-format dispatch this specification introduced is no longer required. **Crucially, that was verified rather than assumed:** a text-layer check found extractable text on **660 of 661 pages** across all 41 documents, with samples confirming they read as the genuine agency publications. Had the conversion produced image-only PDFs, the grounding step would have failed silently and the corpus would have needed rebuilding from original copies. See Section 2.
 
 **(b) The manifest no longer matched the folder.** The four renames were applied under a shorter naming convention (`ReNew_Solar_Power_Private_Limited_IndRa_Solar.pdf`) than the script's targets (`ReNew_Solar_Power_Private_Limited_IndiaRatings_2026-03_Solar.pdf`). The v2.0 manifest carried the script's intended names. The result: `corpus_remediate.py --verify` reported **4 BLOCKED**, the manifest listed four filenames that did not exist and omitted four that did, and only 37 of 41 files verified by hash. The remediation had in substance succeeded — the case collision was gone, the typos were fixed — and the verification tooling reported failure anyway, which is worse than no tooling, because it trains the operator to ignore it.
 
@@ -55,24 +58,43 @@ They differ by five characters, not one. `corpus_manifest.py --verify` confirms 
 
 ---
 
-# 2. Element (a) — container format: the corpus is MIXED
+# 2. Element (a) — container format: now uniformly PDF
 
-**Confirmed, and the finding has changed since v2.0.**
+**All 41 files are genuine PDFs.**
 
-| Container | Count | Signature | Structure |
+| Container | Count | Signature | Text layer |
 | --- | --- | --- | --- |
-| ZIP | **37** | `50 4B 03 04` (`PK\x03\x04`) | One JPEG and one `.txt` OCR file per page, plus `manifest.json` carrying `num_pages` |
-| PDF | **4** | `25 50 44 46` (`%PDF`) | Ordinary PDF with a text layer |
+| PDF | **41** | `25 50 44 46` (`%PDF`) | 660 of 661 pages carry extractable text |
+| ZIP | 0 | — | — |
 
-The four PDFs are the four files touched by the remediation: the two ReNew rationales above, `CARE_Criteria_Consolidation_Combined_Approach_07_March_2025.pdf`, and `India_Ratings_Criteria_Infrastructure_Project_Finance_27_May_2024.pdf`.
+**This has changed twice, and the history matters because it explains why the tooling is defensive.**
 
-**Consequence if unaddressed, in both directions.** A pipeline built on any PDF library — pypdf, pdfplumber, PyMuPDF, or a Gemini file upload declared as `application/pdf` — fails on 37 of 41 files. A pipeline built on the v2.0 ZIP-only contract fails on the other 4. Neither failure raises a clean error; both read as file corruption. The Execution Manual's Day 3 grounding step is on the critical path and would meet one or the other on the first pass.
+*As originally assembled*, every file was a ZIP container holding one JPEG and one OCR text file per page plus a `manifest.json` index, all wearing a `.pdf` extension. A pipeline built on any PDF library — pypdf, pdfplumber, PyMuPDF, or a Gemini upload declared as `application/pdf` — failed on all 41.
 
-**The contract is therefore dispatch, not assumption.** See Section 4.
+*After the first remediation*, four files were re-supplied as genuine PDFs, making the corpus **mixed**: 37 ZIP, 4 PDF. Neither assumption worked, so this specification introduced dispatch on the manifest's `container` column.
 
-**Why the payload hash needed redefining.** For a ZIP container, hashing the sorted `.txt` and image entries gives a content identity that survives rename, filesystem move and ZIP re-compression, because container metadata is excluded. A PDF has no equivalent container/payload separation. Manufacturing one — extracting text and hashing that — would produce a hash dependent on the extraction library's version, which is worse than no abstraction at all. So for `container = PDF`, `payload_sha256` is **declared equal to** `file_sha256`, and the new `payload_basis` column records which rule was applied (`zip-entries` or `file`). The property being given up is stability across PDF re-compression; nothing in this project re-compresses PDFs, and the manifest says plainly which files have the weaker guarantee.
+*After re-download*, all 37 archives came back as real PDFs. The corpus is uniform and the dispatch is unnecessary.
 
----
+**The lesson is not about formats.** It is that the corpus changed underneath the project three times without anyone intending it, and each time the manifest caught it immediately with a precise list. Filenames and container formats are not stable properties of this corpus; content hashes are. That is why Section 4.1 still requires resolution through the manifest even though the format question has resolved itself.
+
+## 2.1 What was checked before accepting the conversion
+
+A format conversion is only harmless if the content survives. Two things were verified, and neither was taken on trust:
+
+| Check | Result |
+| --- | --- |
+| Does every document still pair with a manifest row? | 41 of 41 paired by name; 0 unrecognised |
+| Does every document still yield text? | 41 of 41 have a text layer on 80%+ of pages; 660 of 661 pages overall |
+
+Text samples were read from three documents and confirmed to be the genuine publications — a CARE press release, a second CARE press release, and the Brickwork financial-ratios approach — rather than headers, boilerplate or OCR noise.
+
+**Had the conversion produced image-only PDFs**, the pages would have been pictures of words. Extraction would have returned empty strings, the grounding step would have found nothing, and the failure would have looked like an absent threshold in the source rather than an unreadable file. That is precisely the class of silent failure this specification exists to prevent, and it is why the check was run before the manifest was regenerated rather than after.
+
+## 2.2 The `container` and `payload_basis` columns are retained
+
+Both columns now read the same value on every row — `PDF` and `file` respectively. They are kept rather than dropped because they cost nothing, they document the rule by which each hash was computed, and they would catch a future divergence of exactly the kind that has now happened three times.
+
+**For a PDF, `payload_sha256` equals `file_sha256`.** A PDF has no container/payload separation of the kind the ZIP archives had. Manufacturing one — extracting text and hashing that — would make the hash depend on the extraction library's version, which is worse than no abstraction. The property given up is stability across PDF re-compression; nothing in this project re-compresses PDFs.
 
 # 3. Element (b) — the duplicate methodology
 
@@ -93,25 +115,21 @@ The quarantine is reversible by default. `corpus_remediate.py --delete-duplicate
 
 **These rules are binding on every component that reads the corpus.** Four of them fail silently rather than raising, which is why they are stated as rules rather than left to be discovered.
 
-## 4.1 Resolve through the manifest, and dispatch on `container`
+## 4.1 Resolve through the manifest, and read the `container` column
 
-**Read `Reference_Corpus_Manifest_v3_0.csv` first. Branch on the `container` column. Do not sniff the file, do not infer from the extension, do not assume either format.**
+**Read `Reference_Corpus_Manifest_v3_0.csv` first.** All 41 rows currently read `container = PDF`, so ingestion opens each file with an ordinary PDF library and uses the text layer. **Read the column rather than hard-coding the answer** — it has changed three times, and a pipeline that assumes a format will fail silently the next time it changes.
 
-```
-container == 'ZIP'  ->  open as zipfile; read per-page .txt entries for text,
-                        per-page .jpeg entries for images, manifest.json for num_pages
-container == 'PDF'  ->  open with a PDF library; use the text layer
-```
+**Key documents on `payload_sha256`, not on filename.** Filenames in this corpus have proven unstable **five** separate ways: two collided on case alone, one methodology appeared twice under different names, two carried malformed dates, four were renamed by hand under a convention no tool predicted, and a re-download rewrote 37 of them by replacing underscores with spaces. The payload hash is the stable identifier; the filename is a label.
 
-**Key documents on `payload_sha256`, not on filename.** Filenames in this corpus have already proven unstable four separate ways: two collided on case alone, one methodology appeared twice under different names, two carried malformed dates, and four were renamed by hand under a convention no tool predicted. The payload hash is the stable identifier.
+## 4.2 Declaring `application/pdf` is now correct — but check the manifest, not the extension
 
-## 4.2 Do not declare a corpus file as `application/pdf` to any API
+All 41 files are genuine PDFs, so a Gemini file upload declared as `application/pdf` is correct today. **That was not true a week ago and may not be true again.** When 37 of these files were ZIP archives, the same declaration caused rejection or mis-parsing on 37 of 41 documents. Read the `container` column; do not infer from the `.pdf` extension, which was misleading for most of this corpus's life.
 
-For the 37 ZIP files, a Gemini file upload so declared will be rejected or mis-parsed. Send the extracted per-page text, or the per-page images, not the container. For the 4 genuine PDFs the declaration is correct.
+## 4.3 Text comes from the PDF text layer, and its presence is verifiable
 
-## 4.3 Text comes from the OCR entries, not from a PDF text layer
+Extraction is an ordinary `extract_text()` per page. **Confirm the text layer before relying on it**: `corpus_textcheck.py` reports, per document, how many pages yield extractable text. The current state is 660 of 661 pages across all 41 documents.
 
-For ZIP files there is no text layer. Extraction means reading the `.txt` entries in page order. Page order requires numeric sorting of the entry names — a lexicographic sort puts page 10 before page 2.
+A PDF that is a scan with no text layer extracts as empty strings. That does not raise an error — it looks exactly like a document that does not mention the thing you searched for. If a grounding lookup returns nothing, run the text check before concluding the source is silent.
 
 ## 4.4 Verify before the grounding step
 
@@ -221,6 +239,8 @@ Both carry `HEURISTIC-DISPUTED` in `date_flag`, naming the competing date. The `
 | 4 | Rename | `India_Ratings_Criteria_for_Infrastructure_and_Project_FinanceMay.pdf` → `India_Ratings_Criteria_Infrastructure_Project_Finance_27_May_2024.pdf` | Applied — dangling "May" with no year |
 | 5 | Quarantine | `Fitch_Ratings_Renewable_Energy_Criteria.pdf` | Applied |
 | 6 | Regenerate manifest against the folder as it stands | — | Applied at v3.0 |
+| 7 | Restore filenames after a re-download rewrote 37 of them, and regenerate the manifest against the converted files | `corpus_rebuild.py` | Applied 31 July 2026 |
+| 8 | Verify a text layer survived the conversion before accepting it | `corpus_textcheck.py` | Applied — 660 of 661 pages |
 
 **Post-state, verified 30 July 2026:**
 
@@ -232,13 +252,31 @@ Both carry `HEURISTIC-DISPUTED` in `date_flag`, naming the competing date. The `
 | Manifest rows | 41 |
 | Files on disk resolving to a manifest row | **41 of 41** |
 | Payload hashes matching the manifest | **41 of 41** |
-| Container declarations matching disk | **41 of 41** (37 ZIP, 4 PDF) |
+| Container declarations matching disk | **41 of 41** (PDF on every row) |
 | Distinct payload hashes | 41 — no duplicate group |
 | Tier counts | 20 / 1 / 20 |
 | Tier-3 category counts | Solar 8, Wind 4, Hybrid 6, BESS 1, Wind-Solar-BESS 1 |
 | `corpus_manifest.py --verify` | **PASS** |
 
 ---
+
+# 6.1 Revision within v3.0 — 31 July 2026
+
+*The corpus was re-downloaded and came back materially changed. This section records what happened, because the sequence is the clearest evidence in the project that the manifest is doing real work.*
+
+| Step | What happened |
+| --- | --- |
+| 1 | 41 files copied into the repository. `corpus_manifest.py --verify` returned **FAIL — 74 problems** |
+| 2 | 74 resolved as 37 + 37: thirty-seven files reported both as unexpected and as missing. The download had replaced underscores with spaces |
+| 3 | `corpus_restore_names.py` matched on content hash and found **37 unmatched** — so the bytes had changed too, not just the labels |
+| 4 | `corpus_diagnose.py` found **37 container changes**: the ZIP archives had been served as real PDFs |
+| 5 | `corpus_textcheck.py` confirmed a text layer on **660 of 661 pages**, with samples read from three documents to confirm they were the genuine publications |
+| 6 | `corpus_rebuild.py` restored the canonical filenames by normalised-name matching and regenerated the manifest, carrying tier and category forward from the original audit |
+| 7 | `corpus_manifest.py --verify` returned **PASS** |
+
+**What this cost and what it bought.** Six steps and about half an hour. Without the manifest, the outcome would have been 41 correctly-named-looking files, no error message anywhere, and a grounding step quietly retrieving nothing — discovered, if at all, as an unexplained gap in the rationale output days later.
+
+**The judgement that mattered was step 5, not step 6.** Renaming files and regenerating a manifest is mechanical. Deciding whether a format conversion had destroyed the content is not, and it is the step that could have been skipped by anyone in a hurry. Had the conversion produced image-only PDFs, regenerating the manifest would have produced a confident **PASS** over an unreadable corpus.
 
 # 7. Limitations
 
@@ -252,4 +290,6 @@ Both carry `HEURISTIC-DISPUTED` in `date_flag`, naming the competing date. The `
 
 **7.5 Two sources cited in Core Rating Criteria Section 12 are not in the corpus at all** and cannot be resolved through the manifest: the Ministry of Power / Power Finance Corporation Integrated Rating and Ranking of Power Distribution Utilities, and the MNRE notifications behind the ALMM parameter table. Both are live reference data re-verified on a cadence rather than ingested once. Section 12 marks them **external, not in corpus**, and the grounding step must not attempt a manifest lookup for either.
 
-**7.6 The four genuine PDFs have a weaker content-identity guarantee** than the 37 ZIP containers, because their payload hash is the whole-file hash and would change on PDF re-compression. Nothing in this project re-compresses PDFs. The `payload_basis` column states which files are affected.
+**7.6 Every file now has the weaker content-identity guarantee.** With the corpus uniformly PDF, `payload_sha256` equals `file_sha256` on all 41 rows, so the hash would change on any re-compression even if the words were untouched. When the corpus was ZIP-based, the payload hash excluded container metadata and so survived re-compression. Nothing in this project re-compresses PDFs, and the trade is worth it for a uniform contract — but it is a real reduction in what the hash guarantees, and it is recorded here rather than left for someone to discover.
+
+**7.7 The current manifest was regenerated after the re-download, and that limits what it proves.** It guarantees integrity **from this point forward**: any later change to any file will be caught. It proves nothing about what happened before it was generated. The tier, category and agency assignments were **carried forward from the original audit** rather than re-derived, because those were established by reading the documents; re-deriving them automatically would have been guesswork wearing the appearance of rigour. The publication dates were re-derived by the Section 5.2 rule and the disputes at Section 5.3 still stand.
