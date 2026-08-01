@@ -1,47 +1,888 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "ProjectInput",
-  "description": "JSON Schema for Credit Rating Simulator Project Inputs (CORE v3.0 Appendix A & B)",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/satishtirumela/Credit-Rating-Simulator/schemas/project.schema.json",
+  "title": "Credit Rating Simulator \u2014 Project Input",
+  "description": "Derived from Core Rating Criteria v3.0, Appendix A (Section 14, enumerations) and Appendix B (Section 15, field dictionary), by parsing them. Not hand-transcribed. Regenerate with build_schema.py whenever CORE changes. EVERY PERCENTAGE IS A DECIMAL FRACTION (CORE Section 9.6). Enumerated values are matched on CODE, never on display text (CORE Section 14).",
+  "x-core-version": "3.0",
+  "x-generated-by": "build_schema.py",
   "type": "object",
+  "additionalProperties": false,
   "required": [
-    "technology_type",
-    "project_status",
-    "cod_date",
     "calculation_date",
+    "cod_date",
     "contracted_revenue_share",
-    "p90_plf",
-    "p90_attestation_basis",
-    "p90_resource_study",
-    "p90_preparer"
+    "debt_instruments",
+    "p90_attestation",
+    "project_status",
+    "tangible_net_worth",
+    "technology_type",
+    "total_debt"
   ],
   "properties": {
-    "technology_type": {
-      "type": "string",
-      "enum": ["TECH_SOLAR", "TECH_WIND", "TECH_HYBRID"]
+    "accumulated_losses": {
+      "type": "number",
+      "description": "In the unit declared at currency_unit"
     },
-    "project_status": {
+    "actual_gen_vs_p90_period": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Decimal fraction, NOT a percentage out of 100. 0.9700 means 97% (CORE Section 9.6). No upper bound is imposed: a share cannot exceed 1, but a ratio expressed as a fraction can - actual_gen_vs_p90_* legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate. Range rules that depend on the field are enforced by the engine, not by this schema."
+    },
+    "actual_gen_vs_p90_y1": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Decimal fraction, NOT a percentage out of 100. 0.9700 means 97% (CORE Section 9.6). No upper bound is imposed: a share cannot exceed 1, but a ratio expressed as a fraction can - actual_gen_vs_p90_* legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate. Range rules that depend on the field are enforced by the engine, not by this schema."
+    },
+    "actual_gen_vs_p90_y2": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Decimal fraction, NOT a percentage out of 100. 0.9700 means 97% (CORE Section 9.6). No upper bound is imposed: a share cannot exceed 1, but a ratio expressed as a fraction can - actual_gen_vs_p90_* legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate. Range rules that depend on the field are enforced by the engine, not by this schema."
+    },
+    "actual_gen_vs_p90_y3": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Decimal fraction, NOT a percentage out of 100. 0.9700 means 97% (CORE Section 9.6). No upper bound is imposed: a share cannot exceed 1, but a ratio expressed as a fraction can - actual_gen_vs_p90_* legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate. Range rules that depend on the field are enforced by the engine, not by this schema."
+    },
+    "almm_basis_reference": {
       "type": "string"
     },
-    "cod_date": {
+    "almm_status": {
+      "enum": [
+        "ALMM_COMPLIANT",
+        "ALMM_NOT_APPLICABLE",
+        "ALMM_EXEMPT_OPEN",
+        "ALMM_NON_COMPLIANT",
+        "ALMM_EXEMPT_CLOSED"
+      ],
+      "description": "Regulatory sourcing compliance (\u00a73.3.2) (CORE Appendix A `ALMM_5`)"
+    },
+    "auction_benchmark_note": {
       "type": "string"
+    },
+    "average_dscr": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Ratio multiple, e.g. 1.3400"
+    },
+    "avg_monthly_debt_service": {
+      "type": "number",
+      "description": "In the unit declared at currency_unit"
+    },
+    "bop_grid_complexity": {
+      "enum": [
+        "BOP_CONVENTIONAL",
+        "BOP_MODERATE",
+        "BOP_HIGH"
+      ],
+      "description": "Balance-of-plant and grid-integration complexity (\u00a73.3.1, dimension 2) (CORE Appendix A `BOP_3`)"
+    },
+    "bullet_share": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Decimal fraction, NOT a percentage out of 100. 0.9700 means 97% (CORE Section 9.6). No upper bound is imposed: a share cannot exceed 1, but a ratio expressed as a fraction can - actual_gen_vs_p90_* legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate. Range rules that depend on the field are enforced by the engine, not by this schema."
     },
     "calculation_date": {
-      "type": "string"
+      "type": "string",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "cfads_nca_by_period": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "Optional net-cash-accrual CFADS series. Where supplied, V6 requires agreement with dscr_schedule[].cfads within 2% IN EVERY PERIOD, tested period by period."
+    },
+    "cod_date": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "competitive_position": {
+      "enum": [
+        "COMP_POS_5",
+        "COMP_POS_4",
+        "COMP_POS_3",
+        "COMP_POS_2",
+        "COMP_POS_1"
+      ],
+      "description": "Competitive and essentiality position (\u00a73.1.1) (CORE Appendix A `COMP_POS_5`)"
+    },
+    "contingency_share": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Decimal fraction, NOT a percentage out of 100. 0.9700 means 97% (CORE Section 9.6). No upper bound is imposed: a share cannot exceed 1, but a ratio expressed as a fraction can - actual_gen_vs_p90_* legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate. Range rules that depend on the field are enforced by the engine, not by this schema."
     },
     "contracted_revenue_share": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Decimal fraction, NOT a percentage out of 100. 0.9700 means 97% (CORE Section 9.6). No upper bound is imposed: a share cannot exceed 1, but a ratio expressed as a fraction can - actual_gen_vs_p90_* legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate. Range rules that depend on the field are enforced by the engine, not by this schema."
+    },
+    "contracted_share_75pc_tenor": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Decimal fraction, NOT a percentage out of 100. 0.9700 means 97% (CORE Section 9.6). No upper bound is imposed: a share cannot exceed 1, but a ratio expressed as a fraction can - actual_gen_vs_p90_* legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate. Range rules that depend on the field are enforced by the engine, not by this schema."
+    },
+    "contracted_share_full_tenor": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Decimal fraction, NOT a percentage out of 100. 0.9700 means 97% (CORE Section 9.6). No upper bound is imposed: a share cannot exceed 1, but a ratio expressed as a fraction can - actual_gen_vs_p90_* legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate. Range rules that depend on the field are enforced by the engine, not by this schema."
+    },
+    "contractor_standing": {
+      "enum": [
+        "CONTR_ADEQUATE",
+        "CONTR_WEAK",
+        "CONTR_NOT_APPLICABLE"
+      ],
+      "description": "Pre-COD execution inputs (\u00a77.3) (CORE Appendix A `CONTR_3`)"
+    },
+    "cov_additional_indebtedness": {
+      "enum": [
+        "YES",
+        "NO"
+      ],
+      "description": "boolean (CORE Appendix A `YN_2`)"
+    },
+    "cov_asset_sales": {
+      "enum": [
+        "YES",
+        "NO"
+      ],
+      "description": "boolean (CORE Appendix A `YN_2`)"
+    },
+    "cov_change_of_control": {
+      "enum": [
+        "YES",
+        "NO"
+      ],
+      "description": "boolean (CORE Appendix A `YN_2`)"
+    },
+    "cov_lender_stepin": {
+      "enum": [
+        "YES",
+        "NO"
+      ],
+      "description": "boolean (CORE Appendix A `YN_2`)"
+    },
+    "currency_unit": {
+      "type": "string"
+    },
+    "debt_instruments": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Instrument-level debt build. Treatment is stored per instrument because it moves CORE Sections 5.1 and 5.2 by whole tiers (CORE Section 9.3). A blank treatment is a null, not a default; validation rule V14 blocks it.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "label",
+          "amount",
+          "treatment"
+        ],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0
+          },
+          "treatment": {
+            "enum": [
+              "TREATMENT_DEBT",
+              "TREATMENT_EQUITY"
+            ],
+            "description": "Default is TREATMENT_DEBT for every instrument, including subordinated sponsor loans and CCDs. TREATMENT_EQUITY requires all three CORE Section 9.3 conditions to be affirmatively satisfied."
+          }
+        }
+      }
+    },
+    "deferred_revenue_expenditure": {
+      "type": "number",
+      "description": "In the unit declared at currency_unit"
+    },
+    "discount_rate": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Decimal fraction, NOT a percentage out of 100. 0.9700 means 97% (CORE Section 9.6). No upper bound is imposed: a share cannot exceed 1, but a ratio expressed as a fraction can - actual_gen_vs_p90_* legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate. Range rules that depend on the field are enforced by the engine, not by this schema."
+    },
+    "discount_rate_as_of": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "distribution_lockup": {
+      "enum": [
+        "YES",
+        "NO"
+      ],
+      "description": "boolean (CORE Appendix A `YN_2`)"
+    },
+    "dscr_schedule": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Per-period debt-service schedule. Either this or minimum_dscr satisfies the critical requirement (CORE Appendix B note 1).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "debt_year",
+          "cfads",
+          "interest",
+          "principal"
+        ],
+        "properties": {
+          "debt_year": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "cfads": {
+            "type": "number"
+          },
+          "interest": {
+            "type": "number",
+            "minimum": 0
+          },
+          "principal": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "dsra_encumbered": {
+      "type": "number",
+      "description": "In the unit declared at currency_unit"
+    },
+    "dsra_total": {
+      "type": "number",
+      "description": "In the unit declared at currency_unit"
+    },
+    "epc_structure": {
+      "enum": [
+        "EPC_TURNKEY",
+        "EPC_MULTI",
+        "EPC_NOT_APPLICABLE"
+      ],
+      "description": "Pre-COD execution inputs (\u00a77.3) (CORE Appendix A `EPC_3`)"
+    },
+    "execution_complexity": {
+      "enum": [
+        "EXEC_STANDARD",
+        "EXEC_ELEVATED",
+        "EXEC_NOT_APPLICABLE"
+      ],
+      "description": "Pre-COD execution inputs (\u00a77.3) (CORE Appendix A `EXEC_3`)"
+    },
+    "free_reserves": {
+      "type": "number",
+      "description": "In the unit declared at currency_unit"
+    },
+    "generation_performance_guarantee": {
+      "enum": [
+        "YES",
+        "NO"
+      ],
+      "description": "boolean (CORE Appendix A `YN_2`)"
+    },
+    "hedging_policy": {
+      "enum": [
+        "YES",
+        "NO",
+        "NOT_APPLICABLE_FIXED_RATE"
+      ],
+      "description": "boolean with exemption (CORE Appendix A `YNNA_3`)"
+    },
+    "independent_resource_assessment": {
+      "enum": [
+        "YES",
+        "NO"
+      ],
+      "description": "boolean (CORE Appendix A `YN_2`)"
+    },
+    "installed_capacity_mw_ac": {
+      "type": "number",
+      "minimum": 0,
+      "description": "MW"
+    },
+    "insurance_business_interruption": {
+      "enum": [
+        "YES",
+        "NO"
+      ],
+      "description": "boolean (CORE Appendix A `YN_2`)"
+    },
+    "intangible_assets": {
+      "type": "number",
+      "description": "In the unit declared at currency_unit"
+    },
+    "land_acquisition_status": {
+      "enum": [
+        "PERMIT_COMPLETE",
+        "PERMIT_IN_PROGRESS",
+        "PERMIT_NOT_STARTED"
+      ],
+      "description": "Individual permitting status (\u00a73.1.2, three instances) (CORE Appendix A `PERMIT_3`)"
+    },
+    "lockup_dscr_threshold": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Ratio multiple, e.g. 1.3400"
+    },
+    "minimum_dscr": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Ratio multiple, e.g. 1.3400"
+    },
+    "mitigant_cash_sweep": {
+      "enum": [
+        "YES",
+        "NO"
+      ],
+      "description": "boolean (CORE Appendix A `YN_2`)"
+    },
+    "mitigant_committed_refi": {
+      "enum": [
+        "YES",
+        "NO"
+      ],
+      "description": "boolean (CORE Appendix A `YN_2`)"
+    },
+    "mitigant_ir_hedge": {
+      "enum": [
+        "YES",
+        "NO",
+        "NOT_APPLICABLE_FIXED_RATE"
+      ],
+      "description": "boolean with exemption (CORE Appendix A `YNNA_3`)"
+    },
+    "mitigant_residual_ppa": {
+      "enum": [
+        "YES",
+        "NO"
+      ],
+      "description": "boolean (CORE Appendix A `YN_2`)"
+    },
+    "npv_cfads_loan_life": {
+      "type": "number",
+      "description": "In the unit declared at currency_unit"
+    },
+    "npv_cfads_project_life": {
+      "type": "number",
+      "description": "In the unit declared at currency_unit"
+    },
+    "offtake_states": {
+      "type": "string"
+    },
+    "offtakers": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "description": "Up to FOUR individual counterparties, largest first by contracted share. A fifth aggregated line is carried separately in other_offtakers_*. Shares across the individual lines and the aggregated line must sum to 1.0000 +/- 0.0100 (V3).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "type",
+          "contracted_share",
+          "rating_or_grade"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "OFFTAKER_CI",
+              "OFFTAKER_DISCOM"
+            ]
+          },
+          "contracted_share": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Decimal fraction. Critical where >= 0.2500."
+          },
+          "rating_or_grade": {
+            "type": "string",
+            "description": "C&I: SEBI national long-term scale, AAA to D with modifiers on AA to C. DISCOM: MoP/PFC grade A+, A, B, B-, C, C-, D."
+          },
+          "rating_agency": {
+            "type": "string"
+          },
+          "rating_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "edition": {
+            "type": "string"
+          },
+          "more_recent_published": {
+            "enum": [
+              "YES",
+              "NO"
+            ],
+            "description": "A missing or superseded edition or date is flagged stale per CORE Section 9.9 and raises V12 Warn. It is never silently applied."
+          }
+        }
+      }
+    },
+    "operating_years_completed": {
       "type": "number"
     },
-    "p90_plf": {
+    "operator_mw_under_om": {
+      "type": "number",
+      "minimum": 0,
+      "description": "MW"
+    },
+    "operator_years": {
       "type": "number"
     },
-    "p90_attestation_basis": {
+    "other_cash_encumbered": {
+      "type": "number",
+      "description": "In the unit declared at currency_unit"
+    },
+    "other_cash_total": {
+      "type": "number",
+      "description": "In the unit declared at currency_unit"
+    },
+    "other_offtakers_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "count"
+    },
+    "other_offtakers_share": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Decimal fraction, NOT a percentage out of 100. 0.9700 means 97% (CORE Section 9.6). No upper bound is imposed: a share cannot exceed 1, but a ratio expressed as a fraction can - actual_gen_vs_p90_* legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate. Range rules that depend on the field are enforced by the engine, not by this schema."
+    },
+    "other_offtakers_worst_tier": {
+      "enum": [
+        "CP_STRONG",
+        "CP_ADEQUATE",
+        "CP_WEAK",
+        "CP_POOR_UNRATED"
+      ],
+      "description": "OFFTAKER_TYPE_2 (CORE Appendix A `COUNTERPARTY_4`)"
+    },
+    "p90_attestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "p90_plf",
+        "p90_attestation_basis",
+        "p90_resource_study",
+        "p90_preparer"
+      ],
+      "description": "CORE Section 9.5. ATTESTATION IS THE ONLY ROUTE - the v2.0 derivation route is withdrawn. All four fields are critical; a blank in any one makes p90_plf a null critical input and returns Not Rated.",
+      "properties": {
+        "p90_plf": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Decimal fraction. 0.2600 means 26%."
+        },
+        "p90_attestation_basis": {
+          "const": "ATTESTED_P90",
+          "description": "CORE Appendix A `P90_BASIS_1`. Single permitted value."
+        },
+        "p90_resource_study": {
+          "type": "string",
+          "minLength": 1
+        },
+        "p90_preparer": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "p90_verified_by_lta": {
+      "enum": [
+        "YES",
+        "NO"
+      ],
+      "description": "boolean (CORE Appendix A `YN_2`)"
+    },
+    "paid_up_equity": {
+      "type": "number",
+      "description": "In the unit declared at currency_unit"
+    },
+    "permitting_dispute": {
+      "enum": [
+        "DISPUTE_NONE",
+        "DISPUTE_LAND",
+        "DISPUTE_TRANSMISSION",
+        "DISPUTE_STATUTORY",
+        "DISPUTE_MULTIPLE"
+      ],
+      "description": "Live permitting dispute or lapsed consent (\u00a73.1.2) (CORE Appendix A `DISPUTE_5`)"
+    },
+    "price_volume_risk": {
+      "enum": [
+        "PRICE_VOL_5",
+        "PRICE_VOL_4",
+        "PRICE_VOL_3",
+        "PRICE_VOL_2",
+        "PRICE_VOL_1"
+      ],
+      "description": "Price and volume risk within the contracted portion (\u00a73.2.2) (CORE Appendix A `PRICE_VOL_5`)"
+    },
+    "principal_outstanding_senior": {
+      "type": "number",
+      "description": "In the unit declared at currency_unit"
+    },
+    "project_cfo": {
+      "type": "number",
+      "description": "In the unit declared at currency_unit"
+    },
+    "project_name": {
       "type": "string"
     },
-    "p90_resource_study": {
-      "type": "string"
+    "project_state": {
+      "enum": [
+        "STATE_OPERATING_MATURE",
+        "STATE_OPERATING_RAMPUP",
+        "STATE_PRECOD"
+      ],
+      "description": "Project state for construction and ramp-up (\u00a77.3) (CORE Appendix A `PROJ_STATE_3`)"
     },
-    "p90_preparer": {
-      "type": "string"
+    "project_status": {
+      "enum": [
+        "STATUS_OPERATING",
+        "STATUS_PRECOD"
+      ],
+      "description": "Project status (Template 1 \u00a7A.1) (CORE Appendix A `STATUS_2`)"
+    },
+    "regulatory_stability": {
+      "enum": [
+        "REG_STAB_5",
+        "REG_STAB_4",
+        "REG_STAB_3",
+        "REG_STAB_2",
+        "REG_STAB_1"
+      ],
+      "description": "Regulatory and tariff-policy stability (\u00a73.1.3) (CORE Appendix A `REG_STAB_5`)"
+    },
+    "reinvestment_funding_source": {
+      "enum": [
+        "FUND_OCF",
+        "FUND_MMRA",
+        "FUND_INCREMENTAL_DEBT",
+        "FUND_SPONSOR",
+        "FUND_NOT_IDENTIFIED"
+      ],
+      "description": "Reinvestment funding source (\u00a73.4) (CORE Appendix A `FUND_SRC_5`)"
+    },
+    "reinvestment_ratio": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Decimal fraction, NOT a percentage out of 100. 0.9700 means 97% (CORE Section 9.6). No upper bound is imposed: a share cannot exceed 1, but a ratio expressed as a fraction can - actual_gen_vs_p90_* legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate. Range rules that depend on the field are enforced by the engine, not by this schema."
+    },
+    "remaining_contracted_tenor_years": {
+      "type": "number",
+      "minimum": 0,
+      "description": "years"
+    },
+    "remaining_debt_tenor_years": {
+      "type": "number",
+      "minimum": 0,
+      "description": "years"
+    },
+    "remaining_loan_life_years": {
+      "type": "number",
+      "minimum": 0,
+      "description": "years"
+    },
+    "remaining_project_life_years": {
+      "type": "number",
+      "minimum": 0,
+      "description": "years"
+    },
+    "reporting_covenant": {
+      "enum": [
+        "YES",
+        "NO"
+      ],
+      "description": "boolean (CORE Appendix A `YN_2`)"
+    },
+    "revaluation_reserves": {
+      "type": "number",
+      "description": "In the unit declared at currency_unit"
+    },
+    "securities_premium": {
+      "type": "number",
+      "description": "In the unit declared at currency_unit"
+    },
+    "security_assignment_contracts": {
+      "enum": [
+        "YES",
+        "NO"
+      ],
+      "description": "boolean (CORE Appendix A `YN_2`)"
+    },
+    "security_charge_accounts": {
+      "enum": [
+        "YES",
+        "NO"
+      ],
+      "description": "boolean (CORE Appendix A `YN_2`)"
+    },
+    "security_charge_assets": {
+      "enum": [
+        "YES",
+        "NO"
+      ],
+      "description": "boolean (CORE Appendix A `YN_2`)"
+    },
+    "security_pledge_shares": {
+      "enum": [
+        "YES",
+        "NO"
+      ],
+      "description": "boolean (CORE Appendix A `YN_2`)"
+    },
+    "sponsor_projects_at_cod": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "count"
+    },
+    "sponsor_support_comparable_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "count"
+    },
+    "sponsor_support_this_project": {
+      "enum": [
+        "YES",
+        "NO"
+      ],
+      "description": "boolean (CORE Appendix A `YN_2`)"
+    },
+    "statutory_clearances_status": {
+      "enum": [
+        "PERMIT_COMPLETE",
+        "PERMIT_IN_PROGRESS",
+        "PERMIT_NOT_STARTED"
+      ],
+      "description": "Individual permitting status (\u00a73.1.2, three instances) (CORE Appendix A `PERMIT_3`)"
+    },
+    "tangible_net_worth": {
+      "type": "number",
+      "description": "In the unit declared at currency_unit"
+    },
+    "technology_maturity": {
+      "enum": [
+        "TECH_MAT_STANDARD",
+        "TECH_MAT_NEWER",
+        "TECH_MAT_UNTESTED"
+      ],
+      "description": "Generating technology maturity (\u00a73.3.1, dimension 1) (CORE Appendix A `TECH_MAT_3`)"
+    },
+    "technology_type": {
+      "enum": [
+        "TECH_SOLAR",
+        "TECH_WIND",
+        "TECH_HYBRID"
+      ],
+      "description": "Technology type (Template 1 \u00a7A.1) \u2192 selects the Section 4 threshold set (CORE Appendix A `TECH_3`)"
+    },
+    "total_debt": {
+      "type": "number",
+      "description": "In the unit declared at currency_unit"
+    },
+    "transmission_connectivity_status": {
+      "enum": [
+        "PERMIT_COMPLETE",
+        "PERMIT_IN_PROGRESS",
+        "PERMIT_NOT_STARTED"
+      ],
+      "description": "Individual permitting status (\u00a73.1.2, three instances) (CORE Appendix A `PERMIT_3`)"
+    },
+    "waterfall_trustee": {
+      "enum": [
+        "YES",
+        "NO"
+      ],
+      "description": "boolean (CORE Appendix A `YN_2`)"
+    },
+    "wtg_oem_indian_years": {
+      "type": "number",
+      "minimum": 0,
+      "description": "years"
     }
-  }
+  },
+  "$defs": {
+    "enumerations": {
+      "ALMM_5": [
+        "ALMM_COMPLIANT",
+        "ALMM_NOT_APPLICABLE",
+        "ALMM_EXEMPT_OPEN",
+        "ALMM_NON_COMPLIANT",
+        "ALMM_EXEMPT_CLOSED"
+      ],
+      "BAND_8": [
+        "AAA",
+        "AA",
+        "A",
+        "BBB",
+        "BB",
+        "B",
+        "C",
+        "D"
+      ],
+      "BOP_3": [
+        "BOP_CONVENTIONAL",
+        "BOP_MODERATE",
+        "BOP_HIGH"
+      ],
+      "COMP_POS_5": [
+        "COMP_POS_5",
+        "COMP_POS_4",
+        "COMP_POS_3",
+        "COMP_POS_2",
+        "COMP_POS_1"
+      ],
+      "CONFIDENCE_4": [
+        "High",
+        "Moderate",
+        "Low",
+        "Not Rated"
+      ],
+      "CONTR_3": [
+        "CONTR_ADEQUATE",
+        "CONTR_WEAK",
+        "CONTR_NOT_APPLICABLE"
+      ],
+      "COUNTERPARTY_4": [
+        "CP_STRONG",
+        "CP_ADEQUATE",
+        "CP_WEAK",
+        "CP_POOR_UNRATED"
+      ],
+      "DISPUTE_5": [
+        "DISPUTE_NONE",
+        "DISPUTE_LAND",
+        "DISPUTE_TRANSMISSION",
+        "DISPUTE_STATUTORY",
+        "DISPUTE_MULTIPLE"
+      ],
+      "EPC_3": [
+        "EPC_TURNKEY",
+        "EPC_MULTI",
+        "EPC_NOT_APPLICABLE"
+      ],
+      "EXEC_3": [
+        "EXEC_STANDARD",
+        "EXEC_ELEVATED",
+        "EXEC_NOT_APPLICABLE"
+      ],
+      "FUND_SRC_5": [
+        "FUND_OCF",
+        "FUND_MMRA",
+        "FUND_INCREMENTAL_DEBT",
+        "FUND_SPONSOR",
+        "FUND_NOT_IDENTIFIED"
+      ],
+      "LIQUIDITY_5": [
+        "Superior",
+        "Strong",
+        "Adequate",
+        "Stretched",
+        "Poor"
+      ],
+      "OFFTAKER_TYPE_2": [
+        "OFFTAKER_CI",
+        "OFFTAKER_DISCOM"
+      ],
+      "P90_BASIS_1": [
+        "ATTESTED_P90"
+      ],
+      "PERMIT_3": [
+        "PERMIT_COMPLETE",
+        "PERMIT_IN_PROGRESS",
+        "PERMIT_NOT_STARTED"
+      ],
+      "PRESENCE_4": [
+        "Full",
+        "Partial",
+        "Minimal",
+        "Absent"
+      ],
+      "PRICE_VOL_5": [
+        "PRICE_VOL_5",
+        "PRICE_VOL_4",
+        "PRICE_VOL_3",
+        "PRICE_VOL_2",
+        "PRICE_VOL_1"
+      ],
+      "PROJ_STATE_3": [
+        "STATE_OPERATING_MATURE",
+        "STATE_OPERATING_RAMPUP",
+        "STATE_PRECOD"
+      ],
+      "REG_STAB_5": [
+        "REG_STAB_5",
+        "REG_STAB_4",
+        "REG_STAB_3",
+        "REG_STAB_2",
+        "REG_STAB_1"
+      ],
+      "STATUS_2": [
+        "STATUS_OPERATING",
+        "STATUS_PRECOD"
+      ],
+      "TECH_3": [
+        "TECH_SOLAR",
+        "TECH_WIND",
+        "TECH_HYBRID"
+      ],
+      "TECH_MAT_3": [
+        "TECH_MAT_STANDARD",
+        "TECH_MAT_NEWER",
+        "TECH_MAT_UNTESTED"
+      ],
+      "TIER_5": [
+        "Full",
+        "Strong",
+        "Adequate",
+        "Weak",
+        "Deficient"
+      ],
+      "TREATMENT_2": [
+        "TREATMENT_DEBT",
+        "TREATMENT_EQUITY"
+      ],
+      "VALIDATION_4": [
+        "Pass",
+        "Warn",
+        "Block",
+        "Not Evaluated"
+      ],
+      "YNNA_3": [
+        "YES",
+        "NO",
+        "NOT_APPLICABLE_FIXED_RATE"
+      ],
+      "YN_2": [
+        "YES",
+        "NO"
+      ]
+    }
+  },
+  "anyOf": [
+    {
+      "required": [
+        "dscr_schedule"
+      ],
+      "title": "Schedule route \u2014 minimum_dscr and average_dscr are DERIVED from the schedule and must not also be entered"
+    },
+    {
+      "required": [
+        "minimum_dscr"
+      ],
+      "title": "Direct-entry route \u2014 Section 4.2 has no operand, average_dscr is a non-critical null, V1 returns Not Evaluated"
+    }
+  ],
+  "x-critical-note": "CORE Section 9.8.1: a null in any required field returns \"Insufficient Input \u2014 Not Rated\" and stops the pipeline at Stage 1 (Section 10.1.1). CONDITIONAL CRITICALITY CANNOT BE EXPRESSED IN JSON SCHEMA: offtakers[].type and offtakers[].rating_or_grade are critical only where that offtaker's contracted_share >= 0.2500. Schema validation will pass without them; the engine must still reject at Stage 1. Schema-valid does NOT mean ready to score."
 }

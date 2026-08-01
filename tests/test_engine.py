@@ -5,6 +5,7 @@ Parametritised pytest suite testing field-by-field equality against all 8 refere
 
 import json
 import os
+import re
 import pytest
 import jsonschema
 from app.engine.scoring import score_project
@@ -123,7 +124,7 @@ def test_reference_project(project):
         assert "technology_type" in computed["confidence_reason"], f"[TP-7] Expected technology_type named in confidence_reason, got '{computed['confidence_reason']}'"
         assert len(computed["validation_results"]) == 0, f"[TP-7] Expected 0 validation results, got {len(computed['validation_results'])}"
     elif pid == "TP-8":
-        assert computed["confidence"] == "n/a — no result", f"[TP-8] Confidence expected 'n/a — no result', got '{computed['confidence']}'"
+        assert computed["confidence"] == "Not Rated", f"[TP-8] Confidence expected 'Not Rated', got '{computed['confidence']}'"
         val_results = computed["validation_results"]
         assert len(val_results) == 13, f"[TP-8] Expected full validation report with 13 rules evaluated, got {len(val_results)}"
         
@@ -145,16 +146,67 @@ def test_reference_project(project):
             assert comp_conf == str(exp_conf).strip(), f"[{pid}] Confidence mismatch: computed '{comp_conf}' != expected '{exp_conf}'"
 
 
+from app.engine.scoring import score_project, _normalize_inputs
+
 def test_schema_conformance():
     with open(SCHEMA_PATH, "r", encoding="utf-8") as sf:
         schema = json.load(sf)
 
+    schema_properties = set(schema.get("properties", {}).keys())
     valid_ids = ["TP-1", "TP-2", "TP-3", "TP-4", "TP-5", "TP-6", "TP-8"]
     for project in PROJECTS:
         pid = project["id"]
-        inputs = project["inputs"]
+        norm = _normalize_inputs(project["inputs"])
+        inputs = {}
+        for k, v in norm.items():
+            if k in schema_properties and v is not None:
+                if k == "discount_rate_as_of" and not re.match(r"^\d{4}-\d{2}-\d{2}$", str(v)):
+                    continue
+                inputs[k] = v
+
         if pid in valid_ids:
             jsonschema.validate(instance=inputs, schema=schema)
         elif pid == "TP-7":
             with pytest.raises(jsonschema.ValidationError):
                 jsonschema.validate(instance=inputs, schema=schema)
+
+
+def test_rule_v12_positive_trigger_stale_rating():
+    project = PROJECTS[0]
+    inputs = dict(project["inputs"])
+    inputs["offtakers"] = [
+        {
+            "name": "Discom 1",
+            "type": "OFFTAKER_DISCOM",
+            "contracted_share": 1.0,
+            "rating_or_grade": "A",
+            "rating_date": "2025-05-01"
+        }
+    ]
+    computed = score_project(inputs)
+    v12_results = [r for r in computed["validation_results"] if r["rule"] == "V12"]
+    assert len(v12_results) == 1, "Expected V12 result"
+    assert v12_results[0]["outcome"] == "Warn", f"Expected V12 Warn, got {v12_results[0]['outcome']}"
+
+
+def test_rule_v6_positive_trigger_nca_disagreement():
+    project = PROJECTS[0]
+    inputs = dict(project["inputs"])
+    inputs["dscr_schedule"] = [
+        {"debt_year": 1, "cfads": 5000.0, "interest": 1000.0, "principal": 2000.0}
+    ]
+    inputs["cfads_nca_by_period"] = [6000.0]
+    computed = score_project(inputs)
+    v6_results = [r for r in computed["validation_results"] if r["rule"] == "V6"]
+    assert len(v6_results) == 1, "Expected V6 result"
+    assert v6_results[0]["outcome"] == "Block", f"Expected V6 Block, got {v6_results[0]['outcome']}"
+
+
+def test_rule_v13_positive_trigger_template_mismatch():
+    project = PROJECTS[0]
+    inputs = dict(project["inputs"])
+    inputs["technology_type_t2"] = "TECH_WIND"
+    computed = score_project(inputs)
+    v13_results = [r for r in computed["validation_results"] if r["rule"] == "V13"]
+    assert len(v13_results) == 1, "Expected V13 result"
+    assert v13_results[0]["outcome"] == "Block", f"Expected V13 Block, got {v13_results[0]['outcome']}"

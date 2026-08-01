@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Credit Rating Simulator - Upload Screen</title>
+</head>
+<body>
+    <h1>Credit Rating Simulator — File Upload</h1>
+    <p>Upload Key Input Template 1 (.docx) and Key Input Template 2 (.xlsx) for a project.</p>
+    <hr>
+
+    <form id="uploadForm" action="/api/upload" method="POST" enctype="multipart/form-data">
+        <div>
+            <label for="project_id">Project ID / Name:</label><br>
+            <input type="text" id="project_id" name="project_id" value="TP-2-Mid-Wind" required style="width: 300px;">
+        </div>
+        <br>
+
+        <div>
+            <label for="template1">Key Input Template 1 (.docx):</label><br>
+            <input type="file" id="template1" name="template1" accept=".docx" required>
+        </div>
+        <br>
+
+        <div>
+            <label for="template2">Key Input Template 2 (.xlsx):</label><br>
+            <input type="file" id="template2" name="template2" accept=".xlsx" required>
+        </div>
+        <br>
+
+        <div>
+            <button type="submit" id="submitBtn">Upload Templates to Firebase Storage</button>
+        </div>
+    </form>
+
+    <hr>
+    <div id="statusMessage"></div>
+    <pre id="outputLog" style="background-color: #f0f0f0; padding: 10px; border: 1px solid #ccc; display: none;"></pre>
+
+    <script>
+        const form = document.getElementById('uploadForm');
+        const statusDiv = document.getElementById('statusMessage');
+        const outputLog = document.getElementById('outputLog');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            statusDiv.textContent = 'Uploading files to storage...';
+            outputLog.style.display = 'none';
+
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    statusDiv.textContent = 'Upload successful!';
+                    outputLog.textContent = JSON.stringify(data, null, 2);
+                    outputLog.style.display = 'block';
+                } else {
+                    statusDiv.textContent = 'Upload failed: ' + (data.detail || response.statusText);
+                    outputLog.textContent = JSON.stringify(data, null, 2);
+                    outputLog.style.display = 'block';
+                }
+            } catch (err) {
+                statusDiv.textContent = 'Error during upload: ' + err.message;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -36,6 +36,9 @@ build/
 ~$*.docx
 ~$*.xlsx
 
+# ---- Local storage uploads ----
+storage_uploads/
+
 # ---- OS / editor ----
 .DS_Store
 Thumbs.db

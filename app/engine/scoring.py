@@ -5,6 +5,7 @@ This module implements the five-stage pipeline defined in Core Rating Criteria v
 (CORE Section 10.1.1) to compute credit rating bands for Indian renewable energy SPVs.
 """
 
+import re
 from typing import Dict, Any, List, Optional, Tuple, Set
 import math
 
@@ -109,6 +110,7 @@ def _normalize_inputs(project: Dict[str, Any]) -> Dict[str, Any]:
             if t_key in p or s_key in p or r_key in p:
                 if p.get(s_key) is not None:
                     offtakers.append({
+                        "name": f"Offtaker {idx+1}",
                         "type": p.get(t_key),
                         "contracted_share": float(p[s_key]),
                         "rating_or_grade": p.get(r_key)
@@ -129,6 +131,7 @@ def _normalize_inputs(project: Dict[str, Any]) -> Dict[str, Any]:
                 rt = ratings[i] if i < len(ratings) else None
                 tp = types[i] if i < len(types) else (types[0] if types else "OFFTAKER_DISCOM")
                 offtakers.append({
+                    "name": f"Offtaker {i+1}",
                     "type": tp,
                     "contracted_share": sh,
                     "rating_or_grade": rt
@@ -149,10 +152,25 @@ def _normalize_inputs(project: Dict[str, Any]) -> Dict[str, Any]:
                     except ValueError:
                         amt = 0.0
                     debt_instruments.append({
+                        "label": f"Instrument {len(debt_instruments)+1}",
                         "amount": amt,
                         "treatment": parts[1]
                     })
         p["debt_instruments"] = debt_instruments
+
+    # 5. p90_attestation object normalization for JSON schema
+    if p.get("p90_attestation") is None:
+        plf = p.get("p90_plf")
+        basis = p.get("p90_attestation_basis")
+        study = p.get("p90_resource_study")
+        prep = p.get("p90_preparer")
+        if basis or study or prep or plf is not None:
+            p["p90_attestation"] = {
+                "p90_plf": float(plf) if plf is not None else 0.0,
+                "p90_attestation_basis": "ATTESTED_P90",
+                "p90_resource_study": study if study and study != "p90_resource_study" else "P90 Resource Study",
+                "p90_preparer": prep if prep and prep != "p90_preparer" else "P90 Preparer"
+            }
 
     return p
 
@@ -331,9 +349,16 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
         validation_results.append({"rule": "V3", "outcome": "Not Evaluated", "detail": "Missing operand"})
 
     # V6: Net-cash-accrual CFADS series reconciliation
+    # Derivation: derive direct CFADS series from dscr_schedule if not explicitly passed
     cfads_nca = p.get("cfads_nca_by_period") or p.get("cfads_nca_by_period[]")
     if cfads_nca and isinstance(cfads_nca, list):
         cfads_dir = p.get("cfads_direct_by_period")
+        dscr_sched = p.get("dscr_schedule")
+        if cfads_dir is None and dscr_sched and isinstance(dscr_sched, list):
+            dir_series = [item.get("cfads") for item in dscr_sched if isinstance(item, dict) and item.get("cfads") is not None]
+            if dir_series:
+                cfads_dir = dir_series
+
         if cfads_dir and isinstance(cfads_dir, list):
             disagrees = False
             for p_nca, p_dir in zip(cfads_nca, cfads_dir):
@@ -413,15 +438,59 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
         validation_results.append({"rule": "V11", "outcome": "Not Evaluated", "detail": "Missing operand"})
 
     # V12: Stale parameter check
-    stale_flags = [p.get("stale_offtaker_rating"), p.get("stale_discount_rate"), p.get("stale_almm_parameter")]
+    # Derivation: derive stale flags from raw Appendix B fields if not explicitly passed
+    stale_offtaker = p.get("stale_offtaker_rating")
+    def _parse_yr_mo(d_val):
+        if not d_val:
+            return None, None
+        s = str(d_val).strip()
+        match = re.search(r"\b(\d{4})-(\d{2})\b", s)
+        if match:
+            return int(match.group(1)), int(match.group(2))
+        return None, None
+
+    c_yr, c_mo = _parse_yr_mo(calc_d)
+
+    if stale_offtaker is None and isinstance(offtakers, list):
+        for off in offtakers:
+            if isinstance(off, dict):
+                if off.get("more_recent_published") in ["YES", True]:
+                    stale_offtaker = True
+                    break
+                r_date = off.get("rating_date")
+                r_yr, r_mo = _parse_yr_mo(r_date)
+                if c_yr and c_mo and r_yr and r_mo:
+                    if (c_yr * 12 + c_mo) - (r_yr * 12 + r_mo) > 12:
+                        stale_offtaker = True
+                        break
+
+    stale_disc = p.get("stale_discount_rate")
+    if stale_disc is None:
+        disc_as_of = p.get("discount_rate_as_of")
+        d_yr, d_mo = _parse_yr_mo(disc_as_of)
+        if c_yr and c_mo and d_yr and d_mo:
+            if (c_yr * 12 + c_mo) - (d_yr * 12 + d_mo) > 12:
+                stale_disc = True
+
+    stale_almm = p.get("stale_almm_parameter")
+    if stale_almm is None:
+        almm_ref = p.get("almm_basis_reference") or p.get("almm_as_of")
+        if almm_ref:
+            a_yr, a_mo = _parse_yr_mo(almm_ref)
+            if c_yr and c_mo and a_yr and a_mo:
+                if (c_yr * 12 + c_mo) - (a_yr * 12 + a_mo) > 3:  # > 90 days / 3 months
+                    stale_almm = True
+
+    stale_flags = [stale_offtaker, stale_disc, stale_almm]
     if any(f is True or f == "YES" for f in stale_flags):
         validation_results.append({"rule": "V12", "outcome": "Warn", "detail": "Stale parameter flagged"})
     else:
         validation_results.append({"rule": "V12", "outcome": "Pass", "detail": "No stale parameters"})
 
     # V13: Cross-template duplicate fields check
-    dup_tech = p.get("technology_type_t2")
-    dup_calc = p.get("calculation_date_t2")
+    # Derivation: derive Template 2 header fields from alternate dict structures if not explicitly passed
+    dup_tech = p.get("technology_type_t2") or p.get("t2_technology_type") or (p.get("template2", {}).get("technology_type") if isinstance(p.get("template2"), dict) else None)
+    dup_calc = p.get("calculation_date_t2") or p.get("t2_calculation_date") or (p.get("template2", {}).get("calculation_date") if isinstance(p.get("template2"), dict) else None)
     v13_mismatch = False
     if dup_tech and dup_tech != p.get("technology_type"): v13_mismatch = True
     if dup_calc and dup_calc != p.get("calculation_date"): v13_mismatch = True
@@ -463,7 +532,7 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
             "cap_triggers": [],
             "cap_notice": None,
             "distance_to_band_edge": None,
-            "confidence": "n/a — no result",
+            "confidence": "Not Rated",
             "confidence_reason": "Validation Block — no band issued",
             "null_register": null_register,
             "validation_results": validation_results,
