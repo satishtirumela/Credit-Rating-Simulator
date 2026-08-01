@@ -124,9 +124,20 @@ def test_reference_project(project):
         assert len(computed["validation_results"]) == 0, f"[TP-7] Expected 0 validation results, got {len(computed['validation_results'])}"
     elif pid == "TP-8":
         assert computed["confidence"] == "n/a — no result", f"[TP-8] Confidence expected 'n/a — no result', got '{computed['confidence']}'"
-        assert len(computed["validation_results"]) == 1, f"[TP-8] Expected exactly 1 validation result (V1 Block), got {len(computed['validation_results'])}"
-        assert computed["validation_results"][0]["rule"] == "V1", f"[TP-8] Expected V1 rule, got '{computed['validation_results'][0]['rule']}'"
-        assert computed["validation_results"][0]["outcome"] == "Block", f"[TP-8] Expected Block outcome, got '{computed['validation_results'][0]['outcome']}'"
+        val_results = computed["validation_results"]
+        assert len(val_results) == 13, f"[TP-8] Expected full validation report with 13 rules evaluated, got {len(val_results)}"
+        
+        blocks = [r for r in val_results if r["outcome"] == "Block"]
+        not_evals = [r for r in val_results if r["outcome"] == "Not Evaluated"]
+        passes = [r for r in val_results if r["outcome"] == "Pass"]
+        warns = [r for r in val_results if r["outcome"] == "Warn"]
+
+        assert len(blocks) == 1, f"[TP-8] Expected exactly 1 Block, got {len(blocks)}"
+        assert blocks[0]["rule"] == "V1", f"[TP-8] Expected V1 Block, got {blocks[0]['rule']}"
+        assert len(not_evals) == 1, f"[TP-8] Expected exactly 1 Not Evaluated, got {len(not_evals)}"
+        assert not_evals[0]["rule"] == "V6", f"[TP-8] Expected V6 Not Evaluated, got {not_evals[0]['rule']}"
+        assert len(passes) == 11, f"[TP-8] Expected 11 Pass outcomes, got {len(passes)}"
+        assert len(warns) == 0, f"[TP-8] Expected 0 Warn outcomes, got {len(warns)}"
     else:
         exp_conf = _get_exp_key(expected, "CONFIDENCE")
         comp_conf = computed["confidence"]

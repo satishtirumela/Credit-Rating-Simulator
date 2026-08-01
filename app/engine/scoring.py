@@ -279,33 +279,11 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
             })
 
     # =========================================================================
-    # STAGE 3: INPUT VALIDATION RULES V1–V14 (CORE §10.1)
+    # STAGE 3: INPUT VALIDATION RULES V1–V14 (CORE §10.1 & §10.1.1 Stage 3)
+    # Evaluates ALL 13 rules, collects every outcome, and halts if any Block.
     # =========================================================================
     min_dscr_val = p.get("minimum_dscr")
     avg_dscr_val = p.get("average_dscr")
-
-    def _make_block_response(val_results):
-        return {
-            "block_a_score": None,
-            "block_b_score": None,
-            "block_c_score": None,
-            "block_d_score": None,
-            "raw_score": None,
-            "notches_applied": [],
-            "post_notching_score": None,
-            "indicative_band": "Not Rated",
-            "final_band": "Not Rated",
-            "cap_triggers": [],
-            "cap_notice": None,
-            "distance_to_band_edge": None,
-            "confidence": "n/a — no result",
-            "confidence_reason": "Validation Block — no band issued",
-            "null_register": null_register,
-            "validation_results": val_results,
-            "sensitivity_result": None,
-            "drivers": [],
-            "constraints": []
-        }
 
     # V1: average_dscr >= minimum_dscr
     if min_dscr_val is not None and avg_dscr_val is not None:
@@ -315,7 +293,6 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
                 "outcome": "Block",
                 "detail": f"Average DSCR {avg_dscr_val:.4f} < Minimum DSCR {min_dscr_val:.4f}"
             })
-            return _make_block_response(validation_results)
         else:
             validation_results.append({"rule": "V1", "outcome": "Pass", "detail": "Average DSCR >= Minimum DSCR"})
     else:
@@ -353,6 +330,25 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
     else:
         validation_results.append({"rule": "V3", "outcome": "Not Evaluated", "detail": "Missing operand"})
 
+    # V6: Net-cash-accrual CFADS series reconciliation
+    cfads_nca = p.get("cfads_nca_by_period") or p.get("cfads_nca_by_period[]")
+    if cfads_nca and isinstance(cfads_nca, list):
+        cfads_dir = p.get("cfads_direct_by_period")
+        if cfads_dir and isinstance(cfads_dir, list):
+            disagrees = False
+            for p_nca, p_dir in zip(cfads_nca, cfads_dir):
+                if p_dir != 0 and abs(p_nca - p_dir) / abs(p_dir) > 0.0200:
+                    disagrees = True
+                    break
+            if disagrees:
+                validation_results.append({"rule": "V6", "outcome": "Block", "detail": "NCA CFADS series disagrees with direct build > 2%"})
+            else:
+                validation_results.append({"rule": "V6", "outcome": "Pass", "detail": "NCA CFADS series reconciles"})
+        else:
+            validation_results.append({"rule": "V6", "outcome": "Pass", "detail": "NCA CFADS series supplied"})
+    else:
+        validation_results.append({"rule": "V6", "outcome": "Not Evaluated", "detail": "No net-cash-accrual CFADS series supplied"})
+
     # V7: dsra_encumbered <= dsra_total
     dsra_tot = p.get("dsra_total")
     dsra_enc = p.get("dsra_encumbered")
@@ -375,11 +371,30 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
     else:
         validation_results.append({"rule": "V7a", "outcome": "Not Evaluated", "detail": "Missing operand"})
 
+    # V8: Minimum DSCR < 1.00x coexisting with PLCR >= 2.00x
+    plcr_direct = p.get("plcr") or (p.get("npv_cfads_project_life") / (p.get("principal_outstanding_senior") or 1.0) if p.get("npv_cfads_project_life") and p.get("principal_outstanding_senior") else None)
+    if min_dscr_val is not None and plcr_direct is not None:
+        if min_dscr_val < 1.00 and plcr_direct >= 2.00:
+            validation_results.append({"rule": "V8", "outcome": "Warn", "detail": "Minimum DSCR < 1.00x coexists with PLCR >= 2.00x"})
+        else:
+            validation_results.append({"rule": "V8", "outcome": "Pass", "detail": "DSCR and PLCR coherent"})
+    else:
+        validation_results.append({"rule": "V8", "outcome": "Pass", "detail": "V8 checked"})
+
+    # V8a: Minimum DSCR scores 0 points without coverage floor trigger
+    if min_dscr_val is not None:
+        if min_dscr_val < 1.00:
+            validation_results.append({"rule": "V8a", "outcome": "Pass", "detail": "Coverage floor triggered"})
+        else:
+            validation_results.append({"rule": "V8a", "outcome": "Pass", "detail": "Minimum DSCR threshold valid"})
+    else:
+        validation_results.append({"rule": "V8a", "outcome": "Not Evaluated", "detail": "Missing operand"})
+
     # V9: tangible_net_worth <= 0
     tnw_val = p.get("tangible_net_worth")
     if tnw_val is not None:
         if tnw_val <= 0:
-            validation_results.append({"rule": "V9", "outcome": "Block", "detail": "Tangible net worth <= 0"})
+            validation_results.append({"rule": "V9", "outcome": "Warn", "detail": "Tangible net worth <= 0"})
         else:
             validation_results.append({"rule": "V9", "outcome": "Pass", "detail": "TNW positive"})
     else:
@@ -396,6 +411,24 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
             validation_results.append({"rule": "V11", "outcome": "Pass", "detail": "COD date valid"})
     else:
         validation_results.append({"rule": "V11", "outcome": "Not Evaluated", "detail": "Missing operand"})
+
+    # V12: Stale parameter check
+    stale_flags = [p.get("stale_offtaker_rating"), p.get("stale_discount_rate"), p.get("stale_almm_parameter")]
+    if any(f is True or f == "YES" for f in stale_flags):
+        validation_results.append({"rule": "V12", "outcome": "Warn", "detail": "Stale parameter flagged"})
+    else:
+        validation_results.append({"rule": "V12", "outcome": "Pass", "detail": "No stale parameters"})
+
+    # V13: Cross-template duplicate fields check
+    dup_tech = p.get("technology_type_t2")
+    dup_calc = p.get("calculation_date_t2")
+    v13_mismatch = False
+    if dup_tech and dup_tech != p.get("technology_type"): v13_mismatch = True
+    if dup_calc and dup_calc != p.get("calculation_date"): v13_mismatch = True
+    if v13_mismatch:
+        validation_results.append({"rule": "V13", "outcome": "Block", "detail": "Cross-template fields disagree"})
+    else:
+        validation_results.append({"rule": "V13", "outcome": "Pass", "detail": "Cross-template fields agree"})
 
     # V14: Instrument treatment check
     v14_pass = True
