@@ -970,6 +970,17 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
     d = min(abs(post_notching_score - edge) for edge in INTERIOR_BAND_EDGES)
     d = _round_half_up(d, 1)
 
+    nearest_edge = min(INTERIOR_BAND_EDGES, key=lambda edge: abs(post_notching_score - edge))
+    edge_labels = {
+        22.0: "C/D edge at 22",
+        43.0: "B/C edge at 43",
+        64.0: "BB/B edge at 64",
+        78.0: "BB/BBB edge at 78",
+        90.0: "BBB/A edge at 90",
+        100.0: "A/AA edge at 100",
+        108.0: "AA/AAA edge at 108"
+    }
+
     has_binding_cap = any(trig["binding"] for trig in cap_triggers)
     null_count = len(null_register)
 
@@ -977,7 +988,7 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
     reason_parts = []
     if d < 3.0:
         confidence = "Moderate"
-        reason_parts.append(f"d = {d:.1f} < 3.0")
+        reason_parts.append(f"d = {d:.1f} — within 3.0 points of the {edge_labels.get(nearest_edge, '')}")
     if null_count > 0:
         confidence = "Moderate" if confidence == "High" else ("Low" if null_count >= 4 else "Moderate")
         reason_parts.append(f"{null_count} non-critical nulls")
@@ -985,7 +996,13 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
         confidence = "Moderate"
         reason_parts.append("Binding cap present")
 
-    confidence_reason = f"d = {d:.1f}, " + ", ".join(reason_parts) if reason_parts else f"d = {d:.1f}, no cap, no nulls"
+    if reason_parts:
+        if reason_parts[0].startswith("d = "):
+            confidence_reason = ", ".join(reason_parts)
+        else:
+            confidence_reason = f"d = {d:.1f}, " + ", ".join(reason_parts)
+    else:
+        confidence_reason = f"d = {d:.1f}, no cap, no nulls"
 
     drivers.append(f"Block A Score: {block_a_score:.1f}/35.0")
     drivers.append(f"Block B Score: {block_b_score:.1f}/35.0")
