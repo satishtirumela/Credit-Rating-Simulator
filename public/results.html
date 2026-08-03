@@ -203,6 +203,22 @@
             `;
         }
 
+        const RULE_LABELS = {
+            'V1': 'Average DSCR vs. Minimum DSCR Check',
+            'V2': 'Project Life vs. Loan Life Coverage Check',
+            'V3': 'Offtaker Revenue Share Total Check',
+            'V6': 'CFADS Reconciliation Check',
+            'V7': 'Debt Service Reserve Encumbrance Check',
+            'V7a': 'Other Reserve Cash Encumbrance Check',
+            'V8': 'DSCR / PLCR Coherence Check',
+            'V8a': 'Minimum DSCR Floor Check',
+            'V9': 'Tangible Net Worth Check',
+            'V11': 'Commercial Operation Date Consistency Check',
+            'V12': 'Outdated Rating & Regulatory Parameter Check',
+            'V13': 'Technology Type & Calculation Date Consistency Check',
+            'V14': 'Debt Instrument Classification Check'
+        };
+
         function renderResultsScreen(projData, score) {
             const container = document.getElementById('app-container');
             const inputs = projData.approved_data || projData.extracted_data || {};
@@ -211,7 +227,8 @@
             const isUnrated = !score || score.final_band === 'Not Rated' || score.confidence === 'Not Rated' || score.raw_score === null;
 
             if (isUnrated) {
-                const blockingRules = (score?.validation_results || []).filter(v => v.outcome === 'Block');
+                const valResults = score?.validation_results || [];
+                const blockingRules = valResults.filter(v => v.outcome === 'Block');
                 const isValidationBlock = blockingRules.length > 0;
 
                 if (isValidationBlock) {
@@ -231,20 +248,20 @@
                             <div class="banner banner-cap" style="max-width: 700px; margin: 0 auto 1.5rem auto; justify-content: center;">
                                 Validation Block Triggered — ${blockDetail}
                             </div>
-                            <h3 style="color: var(--text-main); font-size: 1rem; margin-bottom: 1rem; text-align: left;">13 Applicable Validation Rules Status:</h3>
+                            <h3 style="color: var(--text-main); font-size: 1rem; margin-bottom: 1rem; text-align: left;">${valResults.length} Applicable Validation Rules Status:</h3>
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>Rule ID</th>
+                                        <th>Validation Check (Rule ID)</th>
                                         <th>Outcome</th>
                                         <th>Validation Detail</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${(score.validation_results || []).map(v => `
+                                    ${valResults.map(v => `
                                         <tr style="${v.outcome === 'Block' ? 'background: rgba(239,68,68,0.15);' : ''}">
-                                            <td><strong>${v.rule}</strong></td>
-                                            <td><span style="color: ${v.outcome === 'Pass' ? '#34D399' : v.outcome === 'Block' ? '#EF4444' : '#FBBF24'}; font-weight: 700;">${v.outcome}</span></td>
+                                            <td><strong>${RULE_LABELS[v.rule] || v.rule}</strong> <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-left: 4px;">(${v.rule})</span></td>
+                                            <td><span style="color: ${v.outcome === 'Pass' ? '#34D399' : v.outcome === 'Block' ? '#F87171' : '#FBBF24'}; font-weight: 700;">${v.outcome}</span></td>
                                             <td>${v.detail}</td>
                                         </tr>
                                     `).join('')}
@@ -543,12 +560,12 @@
 
                 <div class="card" style="margin-bottom: 1.5rem;">
                     <div class="card-header">
-                        <span class="card-title">Validation Results (13 Applicable Rules)</span>
+                        <span class="card-title">Validation Results (${(score.validation_results || []).length} Applicable Rules)</span>
                     </div>
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Rule ID</th>
+                                <th>Validation Check (Rule ID)</th>
                                 <th>Outcome</th>
                                 <th>Validation Detail</th>
                             </tr>
@@ -556,7 +573,7 @@
                         <tbody>
                             ${(score.validation_results || []).map(v => `
                                 <tr>
-                                    <td><strong>${v.rule}</strong></td>
+                                    <td><strong>${RULE_LABELS[v.rule] || v.rule}</strong> <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-left: 4px;">(${v.rule})</span></td>
                                     <td><span style="color: ${v.outcome === 'Pass' ? '#34D399' : v.outcome === 'Warn' ? '#FBBF24' : '#F87171'}; font-weight: 700;">${v.outcome}</span></td>
                                     <td>${v.detail}</td>
                                 </tr>
