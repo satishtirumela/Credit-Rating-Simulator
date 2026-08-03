@@ -244,15 +244,16 @@
                                     <tr>
                                         <th>Validation Check (Rule ID)</th>
                                         <th>Outcome</th>
-                                        <th>Validation Detail</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     ${valResults.map(v => `
                                         <tr style="${v.outcome === 'Block' ? 'background: rgba(239,68,68,0.15);' : ''}">
-                                            <td><strong>${RULE_LABELS[v.rule] || v.rule}</strong> <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-left: 4px;">(${v.rule})</span></td>
+                                            <td>
+                                                <strong>${RULE_LABELS[v.rule] || v.rule}</strong> <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-left: 4px;">(${v.rule})</span>
+                                                ${v.outcome !== 'Pass' && v.detail ? `<div style="font-size: 0.8rem; color: ${v.outcome === 'Block' ? '#F87171' : '#FBBF24'}; margin-top: 3px; font-weight: 500;">Detail: ${v.detail}</div>` : ''}
+                                            </td>
                                             <td><span style="color: ${v.outcome === 'Pass' ? '#34D399' : v.outcome === 'Block' ? '#F87171' : '#FBBF24'}; font-weight: 700;">${v.outcome}</span></td>
-                                            <td>${v.detail}</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
@@ -557,15 +558,16 @@
                             <tr>
                                 <th>Validation Check (Rule ID)</th>
                                 <th>Outcome</th>
-                                <th>Validation Detail</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${(score.validation_results || []).map(v => `
                                 <tr>
-                                    <td><strong>${RULE_LABELS[v.rule] || v.rule}</strong> <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-left: 4px;">(${v.rule})</span></td>
+                                    <td>
+                                        <strong>${RULE_LABELS[v.rule] || v.rule}</strong> <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-left: 4px;">(${v.rule})</span>
+                                        ${v.outcome !== 'Pass' && v.detail ? `<div style="font-size: 0.8rem; color: ${v.outcome === 'Block' ? '#F87171' : '#FBBF24'}; margin-top: 3px; font-weight: 500;">Detail: ${v.detail}</div>` : ''}
+                                    </td>
                                     <td><span style="color: ${v.outcome === 'Pass' ? '#34D399' : v.outcome === 'Warn' ? '#FBBF24' : '#F87171'}; font-weight: 700;">${v.outcome}</span></td>
-                                    <td>${v.detail}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
