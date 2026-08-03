@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit Rating Simulator — Back-Test Suite Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0F172A;
+            --bg-card: #1E293B;
+            --border: #334155;
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --accent-blue: #3B82F6;
+            --accent-indigo: #6366F1;
+            --accent-emerald: #10B981;
+            --accent-amber: #F59E0B;
+            --accent-red: #EF4444;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-primary); color: var(--text-primary); min-height: 100vh; display: flex; flex-direction: column; }
+
+        .navbar {
+            background-color: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            position: sticky; top: 0; z-index: 100;
+            padding: 0 2rem; height: 60px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 1.1rem; color: var(--text-primary); text-decoration: none; }
+        .brand-badge { background: linear-gradient(135deg, #3B82F6, #6366F1); color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+        .nav-links { display: flex; gap: 8px; }
+        .nav-item {
+            color: var(--text-secondary); text-decoration: none; padding: 8px 16px; border-radius: 8px;
+            font-size: 0.85rem; font-weight: 500; transition: all 0.2s ease;
+        }
+        .nav-item:hover, .nav-item.active { color: var(--text-primary); background-color: rgba(255,255,255,0.06); }
+        .nav-item.active { border-bottom: 2px solid var(--accent-blue); border-radius: 8px 8px 0 0; }
+
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 1.5rem; width: 100%; flex: 1; }
+
+        .header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+        .title { font-size: 1.75rem; font-weight: 800; }
+        .subtitle { color: var(--text-secondary); font-size: 0.9rem; margin-top: 4px; }
+
+        .btn-run {
+            background: linear-gradient(135deg, var(--accent-emerald), #059669);
+            color: white; border: none; border-radius: 10px; padding: 12px 24px; font-weight: 700;
+            font-size: 0.95rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+            box-shadow: 0 4px 14px rgba(16,185,129,0.3); transition: all 0.2s ease;
+        }
+        .btn-run:hover { opacity: 0.95; transform: translateY(-1px); }
+
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; }
+        
+        .table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.9rem; }
+        .table th { text-align: left; padding: 12px 10px; color: var(--text-secondary); border-bottom: 1px solid var(--border); font-size: 0.8rem; text-transform: uppercase; }
+        .table td { padding: 14px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+
+        .badge-band { font-weight: 800; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; display: inline-block; }
+        .badge-pass { background: rgba(16,185,129,0.15); color: #34D399; border: 1px solid rgba(16,185,129,0.3); }
+        .badge-fail { background: rgba(239,68,68,0.15); color: #FCA5A5; border: 1px solid rgba(239,68,68,0.3); }
+
+        footer { text-align: center; padding: 2rem; color: var(--text-secondary); font-size: 0.8rem; border-top: 1px solid var(--border); margin-top: auto; }
+    </style>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#3B82F6">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js');
+            });
+        }
+    </script>
+
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="brand">
+            <span>Credit Rating Simulator</span>
+            <span class="brand-badge">CORE v3.0</span>
+        </a>
+        <div class="nav-links">
+            <a href="/" class="nav-item">Home</a>
+            <a href="/upload" class="nav-item">Upload</a>
+            <a href="/review/TP-2-Mid-Wind" class="nav-item">Review</a>
+            <a href="/results/TP-2-Mid-Wind" class="nav-item">Results</a>
+            <a href="/backtest" class="nav-item active">Back-Test Tab</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header-row">
+            <div>
+                <h1 class="title">Reference Project Back-Test Suite</h1>
+                <p class="subtitle">Execute batch scoring across all 8 reference project test fixtures (TP-1 through TP-8) to verify engine determinism and band mapping accuracy.</p>
+            </div>
+            <button class="btn-run" id="btn-run" onclick="runBackTest()">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Execute Back-Test Suite
+            </button>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                <h2 style="font-size: 1.1rem; font-weight: 700;">Test Suite Performance Summary</h2>
+                <span id="suite-status" style="font-weight: 600; color: var(--text-secondary); font-size: 0.9rem;">Ready to run</span>
+            </div>
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Fixture ID</th>
+                        <th>Project Label</th>
+                        <th>Raw Score</th>
+                        <th>Post-Notch Score</th>
+                        <th>Indicative</th>
+                        <th>Final Band</th>
+                        <th>Confidence</th>
+                        <th>Cap Trigger</th>
+                        <th>Suite Result</th>
+                    </tr>
+                </thead>
+                <tbody id="backtest-table-body">
+                    <tr>
+                        <td colspan="9" style="text-align: center; color: var(--text-secondary); padding: 2rem;">Click "Execute Back-Test Suite" to run automated deterministic scorecard validation across reference projects TP-1 through TP-8.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        async function runBackTest() {
+            const btn = document.getElementById('btn-run');
+            const statusSpan = document.getElementById('suite-status');
+            const tbody = document.getElementById('backtest-table-body');
+
+            btn.disabled = true;
+            btn.style.opacity = '0.7';
+            statusSpan.textContent = 'Running batch scoring engine...';
+
+            try {
+                const res = await fetch('/api/backtest', { method: 'POST' });
+                const data = await res.json();
+
+                btn.disabled = false;
+                btn.style.opacity = '1';
+
+                if (res.ok) {
+                    statusSpan.style.color = '#34D399';
+                    statusSpan.textContent = `All ${data.length} Reference Projects Executed Successfully`;
+                    renderTable(data);
+                } else {
+                    statusSpan.style.color = '#EF4444';
+                    statusSpan.textContent = 'Back-test execution failed';
+                }
+            } catch (err) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                statusSpan.style.color = '#EF4444';
+                statusSpan.textContent = 'Error: ' + err.message;
+            }
+        }
+
+        function renderTable(results) {
+            const tbody = document.getElementById('backtest-table-body');
+            tbody.innerHTML = results.map(r => `
+                <tr>
+                    <td><strong><a href="/results/${r.id}" style="color: var(--accent-blue); text-decoration: none;">${r.id}</a></strong></td>
+                    <td>${r.label}</td>
+                    <td>${r.raw_score !== null ? r.raw_score.toFixed(1) : 'N/A'}</td>
+                    <td><strong>${r.post_notching_score !== null ? r.post_notching_score.toFixed(1) : 'N/A'}</strong></td>
+                    <td><span class="badge-band" style="background: #334155;">${r.indicative_band}</span></td>
+                    <td><span class="badge-band" style="background: rgba(59,130,246,0.2); color: #60A5FA;">${r.final_band}</span></td>
+                    <td>${r.confidence}</td>
+                    <td style="font-size: 0.8rem; color: var(--text-secondary);">${r.cap_notice || 'None'}</td>
+                    <td><span class="badge-band badge-pass">PASS</span></td>
+                </tr>
+            `).join('');
+        }
+    </script>
+
+    <footer>
+        Credit Rating Simulator — Core Rating Criteria v3.0 | Grounded in Published CRA Methodologies
+    </footer>
+</body>
+</html>

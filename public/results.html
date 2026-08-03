@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit Rating Assessment Results — CORE v3.0 Scorecard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --card-border: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-indigo: #6366f1;
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
+
+        /* Top Navigation Bar */
+        .navbar {
+            background-color: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--card-border);
+            position: sticky; top: 0; z-index: 100;
+            padding: 0 2rem; height: 60px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 1.1rem; color: var(--text-main); text-decoration: none; }
+        .brand-badge { background: linear-gradient(135deg, #3B82F6, #6366F1); color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+        .nav-links { display: flex; gap: 8px; }
+        .nav-item {
+            color: var(--text-muted); text-decoration: none; padding: 8px 16px; border-radius: 8px;
+            font-size: 0.85rem; font-weight: 500; transition: all 0.2s ease;
+        }
+        .nav-item:hover, .nav-item.active { color: var(--text-main); background-color: rgba(255,255,255,0.06); }
+        .nav-item.active { border-bottom: 2px solid var(--accent-blue); border-radius: 8px 8px 0 0; }
+
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 1.5rem; width: 100%; flex: 1; }
+
+        /* Page Header */
+        .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+        .project-title { font-size: 1.75rem; font-weight: 800; }
+        .project-meta { font-size: 0.9rem; color: var(--text-muted); margin-top: 4px; }
+        .btn-download {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo));
+            color: white; border: none; border-radius: 10px; padding: 10px 20px; font-weight: 600;
+            cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem;
+        }
+        .btn-download:hover { opacity: 0.95; }
+
+        /* Banners */
+        .banner { padding: 1rem 1.25rem; border-radius: 12px; margin-bottom: 1.5rem; font-weight: 600; font-size: 0.95rem; display: flex; align-items: center; gap: 12px; }
+        .banner-cap { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #FCA5A5; }
+        .banner-elevated { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #FBBF24; }
+        .banner-qa { background: rgba(192, 132, 252, 0.15); border: 1px solid rgba(192, 132, 252, 0.4); color: #E9D5FF; }
+
+        /* Main Score Summary Grid */
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+
+        .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 1.5rem; }
+        .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 10px; }
+        .card-title { font-size: 1.05rem; font-weight: 700; color: var(--text-main); }
+
+        /* Score Display Elements */
+        .score-box { text-align: center; padding: 1rem 0; }
+        .score-val { font-size: 3rem; font-weight: 900; background: linear-gradient(135deg, #60A5FA, #A78BFA); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .score-max { font-size: 1.1rem; color: var(--text-muted); font-weight: 600; }
+        
+        /* Band Badge Elements */
+        .band-badge-container { display: flex; flex-direction: column; align-items: center; gap: 8px; justify-content: center; height: 100%; }
+        .band-badge { font-size: 2.5rem; font-weight: 900; padding: 10px 24px; border-radius: 14px; text-align: center; }
+        .band-aaa { background: rgba(16,185,129,0.2); color: #34D399; border: 2px solid #10B981; }
+        .band-aa { background: rgba(16,185,129,0.15); color: #6EE7B7; border: 2px solid #34D399; }
+        .band-a { background: rgba(59,130,246,0.2); color: #60A5FA; border: 2px solid #3B82F6; }
+        .band-bbb { background: rgba(99,102,241,0.2); color: #A5B4FC; border: 2px solid #6366F1; }
+        .band-bb { background: rgba(245,158,11,0.2); color: #FBBF24; border: 2px solid #F59E0B; }
+        .band-b { background: rgba(249,115,22,0.2); color: #FB923C; border: 2px solid #F97316; }
+        .band-c { background: rgba(239,68,68,0.2); color: #FCA5A5; border: 2px solid #EF4444; }
+        .band-d { background: rgba(153,27,27,0.3); color: #F87171; border: 2px solid #B91C1C; }
+
+        .confidence-badge { padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; display: inline-block; }
+        .conf-high { background: rgba(16,185,129,0.2); color: #34D399; border: 1px solid rgba(16,185,129,0.4); }
+        .conf-mod { background: rgba(245,158,11,0.2); color: #FBBF24; border: 1px solid rgba(245,158,11,0.4); }
+        .conf-low { background: rgba(239,68,68,0.2); color: #FCA5A5; border: 1px solid rgba(239,68,68,0.4); }
+
+        /* BBB/BB Boundary Gauge */
+        .gauge-container { margin-top: 1rem; }
+        .gauge-bar { height: 12px; background: #334155; border-radius: 6px; position: relative; overflow: hidden; }
+        .gauge-fill { height: 100%; background: linear-gradient(to right, #EF4444, #F59E0B 67.8%, #10B981); border-radius: 6px; }
+        .boundary-marker { position: absolute; top: 0; left: 67.8%; width: 2px; height: 100%; background: #FFFFFF; box-shadow: 0 0 6px #FFFFFF; }
+        .boundary-label { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; font-weight: 600; }
+
+        /* Tables */
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.9rem; }
+        .data-table th { text-align: left; padding: 10px; color: var(--text-muted); border-bottom: 1px solid var(--card-border); font-size: 0.8rem; text-transform: uppercase; }
+        .data-table td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+
+        /* Drivers and Constraints Lists */
+        .ticks-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+        .ticks-list li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.9rem; line-height: 1.4; }
+        .tick-icon { color: var(--accent-green); font-weight: 800; }
+        .bullet-icon { color: var(--accent-amber); font-weight: 800; }
+
+        /* Citations & Collapsible */
+        details { background: rgba(15,23,42,0.6); border: 1px solid var(--card-border); border-radius: 8px; padding: 10px 14px; margin-top: 8px; }
+        summary { font-weight: 600; cursor: pointer; color: var(--accent-blue); font-size: 0.85rem; }
+        .citation-text { margin-top: 8px; font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 6px; }
+
+        footer { text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.8rem; border-top: 1px solid var(--card-border); margin-top: auto; }
+    </style>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#3B82F6">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js');
+            });
+        }
+    </script>
+
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="brand">
+            <span>Credit Rating Simulator</span>
+            <span class="brand-badge">CORE v3.0</span>
+        </a>
+        <div class="nav-links">
+            <a href="/" class="nav-item">Home</a>
+            <a href="/upload" class="nav-item">Upload</a>
+            <a href="/review/TP-2-Mid-Wind" class="nav-item">Review</a>
+            <a href="/results/TP-2-Mid-Wind" class="nav-item active">Results</a>
+            <a href="/backtest" class="nav-item">Back-Test Tab</a>
+        </div>
+    </nav>
+
+    <div class="container" id="app-container">
+        <div style="text-align: center; padding: 3rem;" id="loading-state">
+            <h2 style="color: var(--text-muted);">Loading Rating Scorecard Assessment...</h2>
+        </div>
+    </div>
+
+    <footer>
+        Credit Rating Simulator — Core Rating Criteria v3.0 | Grounded in Published CRA Methodologies
+    </footer>
+
+    <script>
+        const projectId = window.location.pathname.split('/')[2] || 'TP-2-Mid-Wind';
+
+        async function fetchAssessment() {
+            try {
+                const res = await fetch(`/api/projects/${projectId}`);
+                const data = await res.json();
+                
+                if (!res.ok) {
+                    renderError(data.detail || 'Failed to load project');
+                    return;
+                }
+
+                // If not scored, trigger scoring
+                let score = data.score;
+                if (!score && data.status === 'approved') {
+                    const scoreRes = await fetch(`/api/projects/${projectId}/score`, { method: 'POST' });
+                    score = await scoreRes.json();
+                }
+
+                renderResultsScreen(data, score);
+            } catch (err) {
+                renderError(err.message);
+            }
+        }
+
+        function renderError(msg) {
+            document.getElementById('app-container').innerHTML = `
+                <div class="card" style="text-align: center; padding: 3rem; border-color: var(--accent-red);">
+                    <h2 style="color: var(--accent-red); margin-bottom: 1rem;">Assessment Error</h2>
+                    <p style="color: var(--text-muted);">${msg}</p>
+                    <a href="/review/${projectId}" class="btn-download" style="margin-top: 1.5rem; display: inline-block;">Go to Review Screen</a>
+                </div>
+            `;
+        }
+
+        function renderResultsScreen(projData, score) {
+            const container = document.getElementById('app-container');
+            const inputs = projData.approved_data || projData.extracted_data || {};
+
+            // UNRATED EXIT CHECK
+            const isUnrated = !score || score.final_band === 'Not Rated' || score.confidence === 'Not Rated' || score.raw_score === null;
+
+            if (isUnrated) {
+                const blockingRules = (score?.validation_results || []).filter(v => v.outcome === 'Block');
+                const isValidationBlock = blockingRules.length > 0;
+
+                if (isValidationBlock) {
+                    const blockDetail = blockingRules.map(b => `${b.rule}: ${b.detail}`).join('; ');
+                    container.innerHTML = `
+                        <div class="page-header">
+                            <div>
+                                <h1 class="project-title">${inputs.project_name || projectId}</h1>
+                                <p class="project-meta">Project ID: ${projectId} | Stage 3 Validation Block</p>
+                            </div>
+                        </div>
+                        <div class="card" style="border-color: var(--accent-red); padding: 2.5rem; text-align: center;">
+                            <h2 style="color: var(--accent-red); font-size: 1.5rem; margin-bottom: 1rem;">Validation Block — Not Rated</h2>
+                            <p style="color: var(--text-muted); max-width: 650px; margin: 0 auto 1.5rem auto; line-height: 1.6;">
+                                The credit rating engine halted execution at Stage 3 Validation because a mandatory criteria block rule was triggered. Per CORE §10.1, no rating band or badge is issued.
+                            </p>
+                            <div class="banner banner-cap" style="max-width: 700px; margin: 0 auto 1.5rem auto; justify-content: center;">
+                                Validation Block Triggered — ${blockDetail}
+                            </div>
+                            <h3 style="color: var(--text-main); font-size: 1rem; margin-bottom: 1rem; text-align: left;">13 Applicable Validation Rules Status:</h3>
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Rule ID</th>
+                                        <th>Outcome</th>
+                                        <th>Validation Detail</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${(score.validation_results || []).map(v => `
+                                        <tr style="${v.outcome === 'Block' ? 'background: rgba(239,68,68,0.15);' : ''}">
+                                            <td><strong>${v.rule}</strong></td>
+                                            <td><span style="color: ${v.outcome === 'Pass' ? '#34D399' : v.outcome === 'Block' ? '#EF4444' : '#FBBF24'}; font-weight: 700;">${v.outcome}</span></td>
+                                            <td>${v.detail}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                            <a href="/review/${projectId}" class="btn-download" style="margin-top: 2rem;">Return to Review Screen</a>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Stage 1 / Stage 2 Missing Critical Field Halt
+                let missingFields = score?.null_register && score.null_register.length > 0 ? score.null_register : [];
+
+                if (missingFields.length === 0 && score?.confidence_reason && score.confidence_reason.includes('missing ')) {
+                    const matchStr = score.confidence_reason.split('missing ')[1].split('.')[0];
+                    const rawNames = matchStr.split(',').map(s => s.trim());
+                    const subfactorMap = {
+                        "p90_plf": "Block B — P90 Resource Assessment",
+                        "p90_attestation_basis": "Block B — P90 Resource Attestation",
+                        "p90_resource_study": "Block B — P90 Resource Study",
+                        "p90_preparer": "Block B — P90 Preparer Qualification",
+                        "dscr_schedule / minimum_dscr": "Block B — Cash-Flow Adequacy & DSCR",
+                        "contracted_revenue_share": "Block A — PPA Revenue Share",
+                        "total_debt": "Block C — Debt & Capital Structure",
+                        "tangible_net_worth": "Block C — Financial Net Worth"
+                    };
+                    missingFields = rawNames.map(f => ({
+                        field: f,
+                        sub_factor: f.includes('offtakers') ? "Block A — Offtaker Rating & Credit Quality" : (subfactorMap[f] || "Block Assessment"),
+                        points_forgone: "Critical Blocking Null"
+                    }));
+                }
+
+                if (missingFields.length === 0) {
+                    missingFields = [{ field: 'technology_type', sub_factor: 'Project Identity', points_forgone: 'Critical Blocking Null' }];
+                }
+
+                container.innerHTML = `
+                    <div class="page-header">
+                        <div>
+                            <h1 class="project-title">${inputs.project_name || projectId}</h1>
+                            <p class="project-meta">Project ID: ${projectId} | Insufficient Critical Data</p>
+                        </div>
+                    </div>
+                    <div class="card" style="border-color: var(--accent-amber); padding: 2.5rem; text-align: center;">
+                        <h2 style="color: var(--accent-amber); font-size: 1.5rem; margin-bottom: 1rem;">Insufficient Input — Not Rated</h2>
+                        <p style="color: var(--text-muted); max-width: 650px; margin: 0 auto 1.5rem auto; line-height: 1.6;">
+                            The credit rating engine halted execution at Stage 1 / Stage 2 validation because critical inputs required for scorecard computation are missing. Per CORE §9.8.1, no rating band or badge is issued.
+                        </p>
+                        <h3 style="color: var(--text-main); font-size: 1rem; margin-bottom: 1rem; text-align: left;">Missing Critical Fields:</h3>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Missing Field Name</th>
+                                    <th>CORE Sub-Factor Impact</th>
+                                    <th>Severity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${missingFields.map(f => `
+                                    <tr>
+                                        <td><code>${f.field || f}</code></td>
+                                        <td>${f.sub_factor || 'Critical Assessment'}</td>
+                                        <td><span style="color: var(--accent-red); font-weight: 700;">Critical Blocking Null</span></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        <a href="/review/${projectId}" class="btn-download" style="margin-top: 2rem;">Return to Review Screen</a>
+                    </div>
+                `;
+                return;
+            }
+
+            // FULL CORE §8.4 RATING DISPLAY
+            const indBand = score.indicative_band;
+            const finalBand = score.final_band;
+            const isCapped = indBand !== finalBand;
+            const capNotice = score.cap_notice || `Band capped at ${finalBand} — Cap Triggered. Score-implied band was ${indBand}.`;
+            const isNonInvGrade = ['BB', 'B', 'C', 'D'].includes(finalBand);
+            const isQARequired = ['C', 'D'].includes(finalBand);
+
+            const postScore = score.post_notching_score;
+            const rawScore = score.raw_score;
+            const conf = score.confidence || 'High';
+            const confReason = score.confidence_reason || '';
+
+            const blkA = score.block_a_score ?? 0;
+            const blkB = score.block_b_score ?? 0;
+            const blkC = score.block_c_score ?? 0;
+            const blkD = score.block_d_score ?? 0;
+
+            const bandClass = `band-${finalBand.toLowerCase()}`;
+            const confClass = conf === 'High' ? 'conf-high' : conf === 'Moderate' ? 'conf-mod' : 'conf-low';
+
+            // Percentage fill for 115 pt scale (78 pt BBB/BB boundary is 67.8%)
+            const scorePct = Math.min(100, Math.max(0, (postScore / 115.0) * 100));
+
+            // Filter notches to only active non-zero adjustments
+            const activeNotches = (score.notches_applied || []).filter(n => (n.notches && n.notches < 0) || (n.points && n.points < 0));
+
+            // Extract drivers and constraints
+            const driversList = (score.drivers && score.drivers.length > 0) ? score.drivers :
+                (score.rationale?.rating_sensitivities?.positive_factors || []);
+
+            const constraintsList = (score.constraints && score.constraints.length > 0) ? score.constraints :
+                (score.rationale?.rating_sensitivities?.negative_factors || []);
+
+            container.innerHTML = `
+                <div class="page-header">
+                    <div>
+                        <h1 class="project-title">${inputs.project_name || projectId}</h1>
+                        <p class="project-meta">Tech: ${inputs.technology_type || 'N/A'} | Installed Capacity: ${inputs.installed_capacity_mw_ac || 'N/A'} MW | ID: ${projectId}</p>
+                    </div>
+                    <a href="/api/projects/${projectId}/download-rationale" target="_blank" class="btn-download">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        Download PDF Report
+                    </a>
+                </div>
+
+                ${isCapped ? `<div class="banner banner-cap"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg> ${capNotice}</div>` : ''}
+
+                ${isNonInvGrade ? `<div class="banner banner-elevated"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Non-Investment Grade / Elevated Risk Flag (Band ≤ BB)</div>` : ''}
+
+                ${isQARequired ? `<div class="banner banner-qa"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg> Mandatory QA-Agent Review Required (Band in C/D Range)</div>` : ''}
+
+                <div class="grid-3">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Scorecard Score</span>
+                            <div style="text-align: right;">
+                                <span class="confidence-badge ${confClass}">${conf} Confidence</span>
+                                ${confReason ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Reason: ${confReason}</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="score-box">
+                            <div class="score-val">${postScore.toFixed(1)}</div>
+                            <div class="score-max">out of 115.0 Points (Raw: ${rawScore.toFixed(1)})</div>
+                        </div>
+                        <div class="gauge-container">
+                            <div class="gauge-bar">
+                                <div class="gauge-fill" style="width: ${scorePct}%;"></div>
+                                <div class="boundary-marker" title="BBB/BB Boundary (78 Points)"></div>
+                            </div>
+                            <div class="boundary-label">
+                                <span>0</span>
+                                <span style="color: #F59E0B;">BB / BBB Boundary (78.0 Pts)</span>
+                                <span>115</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Indicative Band</span>
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">Score-Implied</span>
+                        </div>
+                        <div class="band-badge-container">
+                            <div class="band-badge band-bbb">${indBand}</div>
+                            <div style="font-size: 0.85rem; color: var(--text-muted); text-align: center;">Unadjusted score-implied band</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Final Rating Band</span>
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">Post-Cap & Notch</span>
+                        </div>
+                        <div class="band-badge-container">
+                            <div class="band-badge ${bandClass}">${finalBand}</div>
+                            <div style="font-size: 0.85rem; color: var(--text-muted); text-align: center;">${isCapped ? 'Limited by Override Cap' : 'Final Assessment Band'}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">CORE Risk Block Breakdown</span>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Block Name</th>
+                                    <th>Max Pts</th>
+                                    <th>Achieved</th>
+                                    <th>% Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Block A: Business & Asset Risk</td>
+                                    <td>35.0</td>
+                                    <td><strong>${blkA.toFixed(1)}</strong></td>
+                                    <td>${((blkA/35.0)*100).toFixed(1)}%</td>
+                                </tr>
+                                <tr>
+                                    <td>Block B: Cash-flow Adequacy & Coverage</td>
+                                    <td>35.0</td>
+                                    <td><strong>${blkB.toFixed(1)}</strong></td>
+                                    <td>${((blkB/35.0)*100).toFixed(1)}%</td>
+                                </tr>
+                                <tr>
+                                    <td>Block C: Financial Strength & Liquidity</td>
+                                    <td>25.0</td>
+                                    <td><strong>${blkC.toFixed(1)}</strong></td>
+                                    <td>${((blkC/25.0)*100).toFixed(1)}%</td>
+                                </tr>
+                                <tr>
+                                    <td>Block D: Structural & Covenant Protections</td>
+                                    <td>20.0</td>
+                                    <td><strong>${blkD.toFixed(1)}</strong></td>
+                                    <td>${((blkD/20.0)*100).toFixed(1)}%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Notching Adjustments (Downward-Only)</span>
+                        </div>
+                        ${activeNotches.length > 0 ? `
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Notching Factor</th>
+                                        <th>CORE Source Section</th>
+                                        <th>Adjustment</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${activeNotches.map(n => `
+                                        <tr>
+                                            <td>${n.source_section || n.factor || n.name}</td>
+                                            <td>${n.source_section || 'CORE Section 7'}</td>
+                                            <td><span style="color: var(--accent-red); font-weight: 700;">${typeof n.points === 'number' ? n.points.toFixed(1) : (n.adjustment || 0)} pts</span></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        ` : '<p style="color: var(--text-muted); font-size: 0.85rem; padding: 0.75rem 0;">No notching adjustments applied.</p>'}
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Key Rating Drivers (Upward)</span>
+                        </div>
+                        ${driversList.length > 0 ? `
+                            <ul class="ticks-list">
+                                ${driversList.map(d => `<li><span class="tick-icon">✓</span> <span>${d}</span></li>`).join('')}
+                            </ul>
+                        ` : '<p style="color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem 0;">None identified</p>'}
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Rating Constraints (Downward)</span>
+                        </div>
+                        ${constraintsList.length > 0 ? `
+                            <ul class="ticks-list">
+                                ${constraintsList.map(c => `<li><span class="bullet-icon">•</span> <span>${c}</span></li>`).join('')}
+                            </ul>
+                        ` : '<p style="color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem 0;">None identified</p>'}
+                    </div>
+                </div>
+
+                ${(score.null_register && score.null_register.length > 0) ? `
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <div class="card-header">
+                            <span class="card-title">Null Register (Missing Non-Critical Inputs)</span>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Field Name</th>
+                                    <th>CORE Sub-Factor</th>
+                                    <th>Points Forgone</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${score.null_register.map(n => `
+                                    <tr>
+                                        <td><code>${n.field}</code></td>
+                                        <td>${n.sub_factor}</td>
+                                        <td><span style="color: var(--accent-amber); font-weight: 600;">-${n.points_forgone} pts</span></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                ` : ''}
+
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <div class="card-header">
+                        <span class="card-title">Validation Results (13 Applicable Rules)</span>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Rule ID</th>
+                                <th>Outcome</th>
+                                <th>Validation Detail</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${(score.validation_results || []).map(v => `
+                                <tr>
+                                    <td><strong>${v.rule}</strong></td>
+                                    <td><span style="color: ${v.outcome === 'Pass' ? '#34D399' : v.outcome === 'Warn' ? '#FBBF24' : '#F87171'}; font-weight: 700;">${v.outcome}</span></td>
+                                    <td>${v.detail}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <div class="card-header">
+                        <span class="card-title">Credit Rationale & Grounded Citations</span>
+                    </div>
+                    <p style="font-size: 0.95rem; line-height: 1.6; color: var(--text-main); margin-bottom: 1rem;">
+                        ${score.rationale?.executive_summary || score.rationale?.rationale_text || 'Rationale report generated.'}
+                    </p>
+                    ${(score.rationale?.citations || []).map((cit, idx) => `
+                        <details>
+                            <summary>Methodology Citation [${idx+1}]: ${cit.source_document} (${cit.source_section})</summary>
+                            <div class="citation-text">"${cit.claim}"</div>
+                        </details>
+                    `).join('')}
+                </div>
+
+                <div class="card" style="background: rgba(15,23,42,0.6);">
+                    <div class="card-header">
+                        <span class="card-title">Assumptions & Scope Limitations Disclosures</span>
+                    </div>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">
+                        <strong>Scope Boundary:</strong> Evaluates standalone renewable energy SPV project finance risk. Group support, corporate guarantees, ESG integration, and short-term debt instruments sit within the Criteria Extension scope.<br>
+                        <strong>Disclaimer:</strong> This is an indicative, academic assessment produced for an ICAI AICA Level 2 capstone project. It is not a credit rating issued by a registered credit rating agency and must not be relied upon as one.
+                    </p>
+                </div>
+            `;
+        }
+
+        fetchAssessment();
+    </script>
+</body>
+</html>
