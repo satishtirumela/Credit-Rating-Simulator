@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit Rating Simulator — Review & Approve Inputs</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-blue: #38bdf8;
+            --accent-green: #34d399;
+            --accent-amber: #fbbf24;
+            --accent-purple: #c084fc;
+            --badge-extracted: rgba(56, 189, 248, 0.15);
+            --badge-extracted-text: #38bdf8;
+            --badge-corrected: rgba(251, 191, 36, 0.2);
+            --badge-corrected-text: #fbbf24;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding-bottom: 120px;
+        }
+
+        header {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--card-border);
+            padding: 18px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo-title {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        h1 {
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .status-pill {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--card-border);
+        }
+
+        .status-pill.approved {
+            background: rgba(52, 211, 153, 0.2);
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 32px auto;
+            padding: 0 24px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 12px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn.active {
+            color: var(--text-main);
+            background: rgba(56, 189, 248, 0.15);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 18px;
+            color: var(--accent-blue);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .field-group {
+            margin-bottom: 16px;
+        }
+
+        .field-label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        label {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .badge {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .badge.extracted {
+            background: var(--badge-extracted);
+            color: var(--badge-extracted-text);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .badge.user-corrected {
+            background: var(--badge-corrected);
+            color: var(--badge-corrected-text);
+            border: 1px solid rgba(251, 191, 36, 0.4);
+        }
+
+        .info-banner {
+            background: rgba(56, 189, 248, 0.08);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            color: #93c5fd;
+            border-radius: 8px;
+            padding: 0.65rem 1rem;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 1.25rem;
+            grid-column: 1 / -1;
+            width: 100%;
+        }
+
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: var(--text-main);
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th, td {
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        th {
+            background: rgba(15, 23, 42, 0.8);
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        td input {
+            padding: 6px 10px;
+            font-size: 13px;
+        }
+
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(16px);
+            border-top: 1px solid var(--card-border);
+            padding: 16px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 200;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--accent-blue), #0284c7);
+            color: #0f172a;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 20px rgba(56, 189, 248, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 24px rgba(56, 189, 248, 0.4);
+        }
+
+        .score-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 300;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .score-card {
+            background: #1e293b;
+            border: 1px solid var(--accent-green);
+            border-radius: 18px;
+            padding: 32px;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            text-align: center;
+
+        .score-rating {
+            font-size: 48px;
+            font-weight: 900;
+            color: var(--accent-green);
+            margin: 16px 0;
+        }
+    </style>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#3B82F6">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js');
+            });
+        }
+    </script>
+
+</head>
+    <nav style="background-color: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--card-border); padding: 0 40px; height: 50px; display: flex; align-items: center; justify-content: space-between;">
+        <a href="/" style="display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1rem; color: #f8fafc; text-decoration: none;">
+            <span>Credit Rating Simulator</span>
+            <span style="background: linear-gradient(135deg, #3B82F6, #6366F1); color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px;">CORE v3.0</span>
+        </a>
+        <div style="display: flex; gap: 8px;">
+            <a href="/" style="color: #94a3b8; text-decoration: none; padding: 6px 12px; font-size: 0.85rem; font-weight: 500;">Home</a>
+            <a href="/upload" style="color: #94a3b8; text-decoration: none; padding: 6px 12px; font-size: 0.85rem; font-weight: 500;">Upload</a>
+            <a href="/review/TP-2-Mid-Wind" style="color: #f8fafc; text-decoration: none; padding: 6px 12px; font-size: 0.85rem; font-weight: 600; border-bottom: 2px solid #38bdf8;">Review</a>
+            <a href="/results/TP-2-Mid-Wind" style="color: #94a3b8; text-decoration: none; padding: 6px 12px; font-size: 0.85rem; font-weight: 500;">Results</a>
+            <a href="/backtest" style="color: #94a3b8; text-decoration: none; padding: 6px 12px; font-size: 0.85rem; font-weight: 500;">Back-Test Tab</a>
+        </div>
+    </nav>
+
+    <header>
+        <div class="logo-title">
+            <div class="logo-icon">CRS</div>
+            <div>
+                <h1>Project Input Review & Approval</h1>
+                <div style="font-size: 12px; color: var(--text-muted);" id="project-id-sub">Loading project...</div>
+            </div>
+        </div>
+        <div id="status-pill" class="status-pill">Status: Draft</div>
+    </header>
+
+    <div class="container">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('general')">1. General & Notching</button>
+            <button class="tab-btn" onclick="switchTab('financials')">2. Debt & Financials</button>
+            <button class="tab-btn" onclick="switchTab('offtakers')">3. Offtakers</button>
+            <button class="tab-btn" onclick="switchTab('dscr')">4. DSCR Schedule</button>
+            <button class="tab-btn" onclick="switchTab('p90')">5. P90 Attestation</button>
+        </div>
+
+        <form id="review-form">
+            <!-- TAB 1: General -->
+            <div id="tab-general" class="tab-content active grid-2">
+                <div class="info-banner">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>Values extracted from source documents. Review and edit as necessary.</span>
+                </div>
+                <div class="card">
+                    <div class="card-title">Project Identity</div>
+                    <div class="field-group">
+                        <div class="field-label-row">
+                            <label>Project Name</label>
+                        </div>
+                        <input type="text" id="field-project_name" name="project_name" oninput="markChanged('project_name')">
+                    </div>
+                    <div class="field-group">
+                        <div class="field-label-row">
+                            <label>Technology Type</label>
+                        </div>
+                        <select id="field-technology_type" name="technology_type" onchange="markChanged('technology_type')">
+                            <option value="TECH_SOLAR">TECH_SOLAR — Solar PV</option>
+                            <option value="TECH_WIND">TECH_WIND — Wind Power</option>
+                            <option value="TECH_HYBRID">TECH_HYBRID — Hybrid Wind-Solar</option>
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <div class="field-label-row">
+                            <label>Installed Capacity (MW AC)</label>
+                        </div>
+                        <input type="number" step="any" id="field-installed_capacity_mw_ac" name="installed_capacity_mw_ac" oninput="markChanged('installed_capacity_mw_ac')">
+                    </div>
+                    <div class="field-group">
+                        <div class="field-label-row">
+                            <label>Calculation Date</label>
+                        </div>
+                        <input type="text" id="field-calculation_date" name="calculation_date" oninput="markChanged('calculation_date')">
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Notching & Governance Inputs</div>
+                    <div class="field-group">
+                        <div class="field-label-row">
+                            <label>Contracted Revenue Share</label>
+                        </div>
+                        <input type="number" step="0.01" id="field-contracted_revenue_share" name="contracted_revenue_share" oninput="markChanged('contracted_revenue_share')">
+                    </div>
+                    <div class="field-group">
+                        <div class="field-label-row">
+                            <label>Sponsor Support This Project</label>
+                        </div>
+                        <select id="field-sponsor_support_this_project" name="sponsor_support_this_project" onchange="markChanged('sponsor_support_this_project')">
+                            <option value="YES">YES</option>
+                            <option value="NO">NO</option>
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <div class="field-label-row">
+                            <label>Waterfall Trustee</label>
+                        </div>
+                        <select id="field-waterfall_trustee" name="waterfall_trustee" onchange="markChanged('waterfall_trustee')">
+                            <option value="YES">YES</option>
+                            <option value="NO">NO</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: Financials & Debt Instruments -->
+            <div id="tab-financials" class="tab-content grid-2">
+                <div class="info-banner">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>Values extracted from source documents. Review and edit as necessary.</span>
+                </div>
+                <div class="card" style="grid-column: 1 / -1;">
+                    <div class="card-title">Itemised Debt Instruments</div>
+                    <div class="table-wrapper">
+                        <table id="table-debt">
+                            <thead>
+                                <tr>
+                                    <th>Instrument Label</th>
+                                    <th>Amount (Lakh)</th>
+                                    <th>Treatment</th>
+                                </tr>
+                            </thead>
+                            <tbody id="debt-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: Offtakers -->
+            <div id="tab-offtakers" class="tab-content grid-2">
+                <div class="info-banner">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>Values extracted from source documents. Review and edit as necessary.</span>
+                </div>
+                <div class="card" style="grid-column: 1 / -1;">
+                    <div class="card-title">Offtakers List</div>
+                    <div class="table-wrapper">
+                        <table id="table-offtakers">
+                            <thead>
+                                <tr>
+                                    <th>Offtaker Name</th>
+                                    <th>Type</th>
+                                    <th>Share</th>
+                                    <th>Rating / Grade</th>
+                                    <th>Agency</th>
+                                </tr>
+                            </thead>
+                            <tbody id="offtakers-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: DSCR Schedule -->
+            <div id="tab-dscr" class="tab-content">
+                <div class="info-banner">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>Values extracted from source documents. Review and edit as necessary.</span>
+                </div>
+                <div class="card">
+                    <div class="card-title">Debt Service Coverage Ratio (DSCR) Schedule</div>
+                    <div class="table-wrapper">
+                        <table id="table-dscr">
+                            <thead>
+                                <tr>
+                                    <th>Debt Year</th>
+                                    <th>CFADS (Lakh)</th>
+                                    <th>Interest (Lakh)</th>
+                                    <th>Principal (Lakh)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dscr-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: P90 Attestation -->
+            <div id="tab-p90" class="tab-content grid-2">
+                <div class="info-banner">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>Values extracted from source documents. Review and edit as necessary.</span>
+                </div>
+                <div class="card">
+                    <div class="card-title">P90 Attestation Sub-Fields</div>
+                    <div class="field-group">
+                        <div class="field-label-row">
+                            <label>P90 PLF</label>
+                        </div>
+                        <input type="number" step="0.01" id="field-p90_attestation.p90_plf" oninput="markChanged('p90_attestation.p90_plf')">
+                    </div>
+                    <div class="field-group">
+                        <div class="field-label-row">
+                            <label>P90 Basis</label>
+                        </div>
+                        <input type="text" id="field-p90_attestation.p90_attestation_basis" oninput="markChanged('p90_attestation.p90_attestation_basis')">
+                    </div>
+                    <div class="field-group">
+                        <div class="field-label-row">
+                            <label>Resource Study Reference</label>
+                        </div>
+                        <input type="text" id="field-p90_attestation.p90_resource_study" oninput="markChanged('p90_attestation.p90_resource_study')">
+                    </div>
+                    <div class="field-group">
+                        <div class="field-label-row">
+                            <label>Preparer Signature</label>
+                        </div>
+                        <input type="text" id="field-p90_attestation.p90_preparer" oninput="markChanged('p90_attestation.p90_preparer')">
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Bottom Floating Action Bar -->
+    <div class="bottom-bar">
+        <div style="font-size: 14px; color: var(--text-muted);" id="provenance-summary">
+            Inspect extracted fields and make corrections if needed.
+        </div>
+        <button class="btn" onclick="submitApproval()">
+            Compute Score
+        </button>
+    </div>
+
+    <!-- Score Modal -->
+    <div class="score-modal" id="score-modal">
+        <div class="score-card">
+            <h2 style="font-size: 22px; color: var(--accent-blue);">Credit Score Result</h2>
+            <div class="score-rating" id="modal-rating">AA</div>
+            <p id="modal-sub" style="color: var(--text-muted); margin-bottom: 24px;"></p>
+            <button class="btn" style="margin: 0 auto;" onclick="closeModal()">Close Window</button>
+        </div>
+    </div>
+
+    <script>
+        const projectId = window.location.pathname.split('/').pop() || 'TP-2-Mid-Wind';
+        let projectRecord = null;
+        let originalExtracted = {};
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+        }
+
+        function markChanged(path) {
+            const badge = document.getElementById(`badge-${path}`);
+            if (badge) {
+                badge.className = 'badge user-corrected';
+                badge.innerText = 'User-Corrected';
+            }
+        }
+
+        async function loadProject() {
+            document.getElementById('project-id-sub').innerText = `Project ID: ${projectId}`;
+            try {
+                const res = await fetch(`/api/projects/${projectId}`);
+                projectRecord = await res.json();
+                originalExtracted = projectRecord.extracted_data || {};
+                const data = projectRecord.approved_data || originalExtracted;
+
+                if (projectRecord.status === 'approved') {
+                    const pill = document.getElementById('status-pill');
+                    pill.className = 'status-pill approved';
+                    pill.innerText = 'Status: Approved';
+                }
+
+                // Populate scalar fields
+                ['project_name', 'technology_type', 'installed_capacity_mw_ac', 'calculation_date', 
+                 'contracted_revenue_share', 'sponsor_support_this_project', 'waterfall_trustee'].forEach(k => {
+                    const el = document.getElementById(`field-${k}`);
+                    if (el && data[k] !== undefined && data[k] !== null) {
+                        el.value = data[k];
+                    }
+                });
+
+                // Populate P90
+                const p90 = data.p90_attestation || {};
+                ['p90_plf', 'p90_attestation_basis', 'p90_resource_study', 'p90_preparer'].forEach(k => {
+                    const el = document.getElementById(`field-p90_attestation.${k}`);
+                    if (el && p90[k] !== undefined && p90[k] !== null) {
+                        el.value = p90[k];
+                    }
+                });
+
+                // Populate Debt Instruments
+                const debtBody = document.getElementById('debt-tbody');
+                debtBody.innerHTML = '';
+                (data.debt_instruments || []).forEach((inst, idx) => {
+                    debtBody.innerHTML += `
+                        <tr>
+                            <td><input type="text" value="${inst.label || ''}" id="debt-label-${idx}" oninput="markChanged('debt[${idx}].label')"></td>
+                            <td><input type="number" value="${inst.amount || 0}" id="debt-amount-${idx}" oninput="markChanged('debt[${idx}].amount')"></td>
+                            <td><input type="text" value="${inst.treatment || ''}" id="debt-treatment-${idx}" oninput="markChanged('debt[${idx}].treatment')"></td>
+                        </tr>
+                    `;
+                });
+
+                // Populate Offtakers
+                const offBody = document.getElementById('offtakers-tbody');
+                offBody.innerHTML = '';
+                (data.offtakers || []).forEach((off, idx) => {
+                    offBody.innerHTML += `
+                        <tr>
+                            <td><input type="text" value="${off.name || ''}" id="off-name-${idx}" oninput="markChanged('off[${idx}].name')"></td>
+                            <td><input type="text" value="${off.type || ''}" id="off-type-${idx}" oninput="markChanged('off[${idx}].type')"></td>
+                            <td><input type="number" step="0.01" value="${off.contracted_share || 0}" id="off-share-${idx}" oninput="markChanged('off[${idx}].share')"></td>
+                            <td><input type="text" value="${off.rating_or_grade || ''}" id="off-grade-${idx}" oninput="markChanged('off[${idx}].grade')"></td>
+                            <td><input type="text" value="${off.rating_agency || ''}" id="off-agency-${idx}" oninput="markChanged('off[${idx}].agency')"></td>
+                        </tr>
+                    `;
+                });
+
+                // Populate DSCR
+                const dscrBody = document.getElementById('dscr-tbody');
+                dscrBody.innerHTML = '';
+                (data.dscr_schedule || []).forEach((item, idx) => {
+                    dscrBody.innerHTML += `
+                        <tr>
+                            <td>${item.debt_year}</td>
+                            <td><input type="number" step="any" value="${item.cfads || 0}" id="dscr-cfads-${idx}" oninput="markChanged('dscr[${idx}].cfads')"></td>
+                            <td><input type="number" step="any" value="${item.interest || 0}" id="dscr-interest-${idx}" oninput="markChanged('dscr[${idx}].interest')"></td>
+                            <td><input type="number" step="any" value="${item.principal || 0}" id="dscr-principal-${idx}" oninput="markChanged('dscr[${idx}].principal')"></td>
+                        </tr>
+                    `;
+                });
+
+            } catch (err) {
+                alert('Error loading project record: ' + err);
+            }
+        }
+
+        async function submitApproval() {
+            const btn = document.querySelector('.btn-primary');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerText = 'Executing Grounded Assessment Pipeline...';
+            }
+
+            const formData = { ...originalExtracted };
+
+            ['project_name', 'technology_type', 'installed_capacity_mw_ac', 'calculation_date', 
+             'contracted_revenue_share', 'sponsor_support_this_project', 'waterfall_trustee'].forEach(k => {
+                const el = document.getElementById(`field-${k}`);
+                if (el) formData[k] = el.value;
+            });
+
+            const p90 = formData.p90_attestation || {};
+            ['p90_plf', 'p90_attestation_basis', 'p90_resource_study', 'p90_preparer'].forEach(k => {
+                const el = document.getElementById(`field-p90_attestation.${k}`);
+                if (el) p90[k] = el.value;
+            });
+            formData.p90_attestation = p90;
+
+            try {
+                const res = await fetch(`/api/projects/${projectId}/approve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                const appRes = await res.json();
+
+                if (res.ok) {
+                    window.location.href = appRes.redirect_url || `/results/${projectId}`;
+                } else {
+                    alert('Approval failed: ' + (appRes.detail || JSON.stringify(appRes)));
+                    if (btn) { btn.disabled = false; btn.innerText = 'Approve & Run Full Rating Assessment'; }
+                }
+            } catch (err) {
+                alert('Error submitting approval: ' + err.message);
+                if (btn) { btn.disabled = false; btn.innerText = 'Approve & Run Full Rating Assessment'; }
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('score-modal').style.display = 'none';
+            window.location.reload();
+        }
+
+        window.onload = loadProject;
+    </script>
+</body>
+</html>

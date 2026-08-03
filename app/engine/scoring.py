@@ -73,7 +73,24 @@ def _val_to_tier(val: int) -> str:
 def _normalize_inputs(project: Dict[str, Any]) -> Dict[str, Any]:
     p = dict(project)
 
-    # 1. Minimum and Average DSCR
+    # 1. Minimum and Average DSCR derivation from dscr_schedule
+    dscr_sched = p.get("dscr_schedule")
+    if isinstance(dscr_sched, list) and dscr_sched:
+        dscr_ratios = []
+        for entry in dscr_sched:
+            if isinstance(entry, dict):
+                cfads = float(entry.get("cfads") or 0.0)
+                ds = float(entry.get("debt_service") or 0.0)
+                if ds <= 0:
+                    ds = float(entry.get("interest") or 0.0) + float(entry.get("principal") or 0.0)
+                if ds > 0:
+                    dscr_ratios.append(cfads / ds)
+        if dscr_ratios:
+            if p.get("minimum_dscr") is None:
+                p["minimum_dscr"] = round(min(dscr_ratios), 4)
+            if p.get("average_dscr") is None:
+                p["average_dscr"] = round(sum(dscr_ratios) / len(dscr_ratios), 4)
+
     if p.get("minimum_dscr") is None:
         for k in ["Minimum DSCR (derived from dscr_schedule)", "minimum_dscr"]:
             if k in p and p[k] is not None:
@@ -159,7 +176,17 @@ def _normalize_inputs(project: Dict[str, Any]) -> Dict[str, Any]:
         p["debt_instruments"] = debt_instruments
 
     # 5. p90_attestation object normalization for JSON schema
-    if p.get("p90_attestation") is None:
+    if isinstance(p.get("p90_attestation"), dict):
+        p90_obj = p["p90_attestation"]
+        if p.get("p90_plf") is None:
+            p["p90_plf"] = p90_obj.get("p90_plf")
+        if not p.get("p90_attestation_basis"):
+            p["p90_attestation_basis"] = p90_obj.get("p90_attestation_basis")
+        if not p.get("p90_resource_study"):
+            p["p90_resource_study"] = p90_obj.get("p90_resource_study")
+        if not p.get("p90_preparer"):
+            p["p90_preparer"] = p90_obj.get("p90_preparer")
+    elif p.get("p90_attestation") is None:
         plf = p.get("p90_plf")
         basis = p.get("p90_attestation_basis")
         study = p.get("p90_resource_study")
@@ -249,6 +276,31 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
                         missing_criticals.append(f"offtakers[{idx}].rating_or_grade")
 
     if missing_criticals:
+        subfactor_map = {
+            "technology_type": ("Project Identity", "Critical Blocking Null"),
+            "project_status": ("Project Status & COD", "Critical Blocking Null"),
+            "cod_date": ("Project Status & COD", "Critical Blocking Null"),
+            "calculation_date": ("Assessment Date", "Critical Blocking Null"),
+            "contracted_revenue_share": ("Block A — PPA Revenue Share", "Critical Blocking Null"),
+            "p90_plf": ("Block B — P90 Resource Assessment", "Critical Blocking Null"),
+            "p90_attestation_basis": ("Block B — P90 Resource Attestation", "Critical Blocking Null"),
+            "p90_resource_study": ("Block B — P90 Resource Study", "Critical Blocking Null"),
+            "p90_preparer": ("Block B — P90 Preparer Qualification", "Critical Blocking Null"),
+            "dscr_schedule / minimum_dscr": ("Block B — Cash-Flow Adequacy & DSCR", "Critical Blocking Null"),
+            "total_debt": ("Block C — Debt & Capital Structure", "Critical Blocking Null"),
+            "tangible_net_worth": ("Block C — Financial Net Worth", "Critical Blocking Null"),
+        }
+        critical_null_reg = []
+        for f_name in missing_criticals:
+            sf, sev = subfactor_map.get(f_name, ("Block Assessment", "Critical Blocking Null"))
+            if "offtakers" in f_name:
+                sf = "Block A — Offtaker Rating & Credit Quality"
+            critical_null_reg.append({
+                "field": f_name,
+                "sub_factor": sf,
+                "points_forgone": sev
+            })
+
         return {
             "block_a_score": None,
             "block_b_score": None,
@@ -264,7 +316,7 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
             "distance_to_band_edge": None,
             "confidence": "Not Rated",
             "confidence_reason": f"Critical null — missing {', '.join(missing_criticals)}. No band issued",
-            "null_register": [],
+            "null_register": critical_null_reg,
             "validation_results": [],
             "sensitivity_result": None,
             "drivers": [],
@@ -1033,7 +1085,9 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
 
     cap_notice = None
     if final_band != indicative_band:
-        cap_notice = f"Band capped at {final_band} — score-implied band was {indicative_band}."
+        binding_trigs = [t["trigger"] for t in cap_triggers if t.get("binding")]
+        trig_summary = ", ".join(binding_trigs) if binding_trigs else "Cap Triggered"
+        cap_notice = f"Band capped at {final_band} — {trig_summary}. Score-implied band was {indicative_band}."
 
     # --- CONFIDENCE LEVEL (CORE §9.8.3) ---
     d = min(abs(post_notching_score - edge) for edge in INTERIOR_BAND_EDGES)
@@ -1073,8 +1127,21 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
     else:
         confidence_reason = f"d = {d:.1f}, no cap, no nulls"
 
-    drivers.append(f"Block A Score: {block_a_score:.1f}/35.0")
-    drivers.append(f"Block B Score: {block_b_score:.1f}/35.0")
+    drivers = []
+    constraints = []
+    block_info = [
+        ("Block A", block_a_score, 35.0),
+        ("Block B", block_b_score, 35.0),
+        ("Block C", block_c_score, 25.0),
+        ("Block D", block_d_score, 20.0),
+    ]
+
+    for b_name, b_score, b_max in block_info:
+        pct = (b_score / b_max) * 100.0 if b_max > 0 else 0.0
+        if pct >= 70.0:
+            drivers.append(f"{b_name} Score: {b_score:.1f}/{b_max:.1f}")
+        else:
+            constraints.append(f"{b_name} Score: {b_score:.1f}/{b_max:.1f}")
 
     sens_min_dscr = 1.20
     s_4_1_sens = 0.0
@@ -1138,5 +1205,12 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
         "validation_results": validation_results,
         "sensitivity_result": sensitivity_result,
         "drivers": drivers,
-        "constraints": constraints
+        "constraints": constraints,
+        "minimum_dscr": min_dscr_val,
+        "average_dscr": avg_dscr_val,
+        "plcr": plcr_val,
+        "llcr": llcr_val,
+        "gearing": gearing_val,
+        "dsra_months": months_dsra_cover,
+        "liquidity_months": _round_half_up((unenc_dsra + unenc_oth_cash) / avg_m_ds, 1) if avg_m_ds and avg_m_ds > 0 else months_dsra_cover
     }

@@ -56,11 +56,20 @@ def save_project_file(project_id: str, filename: str, content_bytes: bytes) -> D
     storage_provider = "local"
     remote_url = None
 
+    ext = os.path.splitext(filename)[1].lower()
+    if ext == ".docx":
+        content_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    elif ext == ".xlsx":
+        content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    else:
+        content_type = "application/octet-stream"
+
     if _firebase_initialized:
         try:
-            bucket = storage.bucket()
+            b_name = os.getenv("FIREBASE_STORAGE_BUCKET")
+            bucket = storage.bucket(name=b_name) if b_name else storage.bucket()
             blob = bucket.blob(rel_path)
-            blob.upload_from_string(content_bytes)
+            blob.upload_from_string(content_bytes, content_type=content_type)
             remote_url = blob.public_url or f"gs://{bucket.name}/{rel_path}"
             storage_provider = "firebase_storage"
         except Exception as e:
@@ -75,3 +84,29 @@ def save_project_file(project_id: str, filename: str, content_bytes: bytes) -> D
         "remote_url": remote_url,
         "size_bytes": len(content_bytes)
     }
+
+
+def get_project_file_bytes(project_id: str, filename: str) -> bytes:
+    """
+    Downloads file bytes directly from Firebase Storage bucket at projects/{project_id}/{filename}.
+    Falls back to local file storage if Firebase Storage fails or is unavailable.
+    """
+    safe_pid = project_id.strip() or "default_project"
+    rel_path = f"projects/{safe_pid}/{filename}"
+
+    if _firebase_initialized:
+        try:
+            b_name = os.getenv("FIREBASE_STORAGE_BUCKET")
+            bucket = storage.bucket(name=b_name) if b_name else storage.bucket()
+            blob = bucket.blob(rel_path)
+            if blob.exists():
+                return blob.download_as_bytes()
+        except Exception as e:
+            print(f"[STORAGE WARNING] Failed to download '{rel_path}' from Firebase Storage: {str(e)}. Falling back to local storage.")
+
+    local_file_path = os.path.join(UPLOAD_DIR, "projects", safe_pid, filename)
+    if os.path.exists(local_file_path):
+        with open(local_file_path, "rb") as f:
+            return f.read()
+
+    raise FileNotFoundError(f"File '{rel_path}' not found in Firebase Storage or local uploads")
