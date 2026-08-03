@@ -130,8 +130,16 @@
             animation: fadeIn 0.3s ease;
         }
 
+        .tab-content.grid-2 {
+            display: none;
+        }
+
         .tab-content.active {
             display: block;
+        }
+
+        .tab-content.active.grid-2 {
+            display: grid;
         }
 
         @keyframes fadeIn {
