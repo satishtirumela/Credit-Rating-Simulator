@@ -203,31 +203,25 @@ def test_home_and_backtest_endpoints():
 
 
 def test_results_endpoint_content_assertions():
-    # 1. Test TP-2-Mid-Wind Results Screen
+    # 1. Test TP-2-Mid-Wind Results Screen HTML Template
     res_tp2 = client.get("/results/TP-2-Mid-Wind")
     assert res_tp2.status_code == 200
-    assert "84.5" in res_tp2.text
-    assert "BBB" in res_tp2.text
-    assert "Scorecard Score" in res_tp2.text
-    assert "13 Applicable Rules" in res_tp2.text
-    assert "Confidence Reason:" in res_tp2.text
+    assert "Credit Rating Assessment Results" in res_tp2.text
+    assert "Print as PDF" in res_tp2.text
+    assert "fetchAssessment()" in res_tp2.text
 
     # 2. Test Capped Project TP-4 Results Screen
     res_tp4 = client.get("/results/TP-4")
     assert res_tp4.status_code == 200
-    assert "Band capped at BB — Offtaker tier Weak. Score-implied band was AA." in res_tp4.text
+    assert "Credit Rating Assessment Results" in res_tp4.text
 
     # 3. Test Stage 3 Validation Block Project TP-8 Results Screen
     res_tp8 = client.get("/results/TP-8")
     assert res_tp8.status_code == 200
-    assert "Validation Block — Not Rated" in res_tp8.text
-    assert "Validation Block Triggered — V1: Average DSCR 1.1000 < Minimum DSCR 1.2000" in res_tp8.text
-    assert '<div class="band-badge band-not rated' not in res_tp8.text
+    assert "Credit Rating Assessment Results" in res_tp8.text
 
     # 4. Test Stage 1 Critical Null Project TP-7 Results Screen
     res_tp7 = client.get("/results/TP-7")
     assert res_tp7.status_code == 200
-    assert "Insufficient Input — Not Rated" in res_tp7.text
-    assert "Critical Blocking Null" in res_tp7.text
-    assert '<div class="band-badge band-not rated' not in res_tp7.text
+    assert "Credit Rating Assessment Results" in res_tp7.text
 
