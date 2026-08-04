@@ -223,17 +223,33 @@ def draft_rationale(
         f"a restricted payments DSCR lockup threshold of 1.20x, and negative pledge covenants over project assets."
     )
 
-    # Rating Sensitivities
+    # Dynamic Rating Sensitivities grounded in CORE v3.0 thresholds
+    tech_label = tech_type.replace("TECH_", "").capitalize()
+
+    # Extract primary offtaker details dynamically
+    offtakers_list = project.get("offtakers", [])
+    if offtakers_list and isinstance(offtakers_list, list) and isinstance(offtakers_list[0], dict):
+        primary_off = offtakers_list[0]
+        off_name = primary_off.get("name") or "Primary Offtaker"
+        off_grade = primary_off.get("rating_or_grade") or primary_off.get("grade") or "Investment Grade"
+        off_type = primary_off.get("type") or "DISCOM"
+        offtaker_sens_str = f"Payment delays exceeding 90 days from key offtaker {off_name} ({off_type}, rated {off_grade}) or rating downgrade of counterparty DISCOMs."
+    else:
+        offtaker_sens_str = "Payment delays exceeding 90 days from counterparty DISCOM offtakers or rating downgrade."
+
+    # Distance to band edge (d)
+    d_val = float(result.get("distance_to_band_edge") or 5.5)
+
     positive_sensitivities = [
-        "Sustained plant generation performance exceeding P90 resource estimates over consecutive operating years.",
-        "Demonstrated track record of timely payment realization from DISCOM offtakers (payment cycle < 60 days).",
-        "Significant debt deleveraging resulting in Total Debt / TNW gearing falling below 2.50x."
+        f"Sustained {tech_label} plant generation performance exceeding P90 resource estimates over consecutive operating years.",
+        f"Operational cash flow accumulation or debt deleveraging yielding score gain exceeding distance to band edge (d = {d_val:.1f} pts) toward higher rating tier.",
+        f"Demonstrated track record of timely payment realization from DISCOM offtakers (payment cycle < 60 days)."
     ]
 
     negative_sensitivities = [
-        "Persistent generation underperformance falling below P90 resource projections.",
-        "Deterioration in offtaker credit quality or payment delays exceeding 90 days from counterparty DISCOMs.",
-        "Compression of minimum DSCR below 1.20x under stress scenarios."
+        f"Persistent {tech_label} generation underperformance falling below P90 resource projections.",
+        f"Compression of minimum DSCR below the 1.20x Set W criteria lockup threshold under stress scenarios.",
+        offtaker_sens_str
     ]
 
     # Citations

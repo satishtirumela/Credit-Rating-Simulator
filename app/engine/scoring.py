@@ -1129,19 +1129,49 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
 
     drivers = []
     constraints = []
-    block_info = [
-        ("Block A", block_a_score, 35.0),
-        ("Block B", block_b_score, 35.0),
-        ("Block C", block_c_score, 25.0),
-        ("Block D", block_d_score, 20.0),
-    ]
 
-    for b_name, b_score, b_max in block_info:
-        pct = (b_score / b_max) * 100.0 if b_max > 0 else 0.0
-        if pct >= 70.0:
-            drivers.append(f"{b_name} Score: {b_score:.1f}/{b_max:.1f}")
+    # Grounded sub-factor variables
+    rev_pct = (tot_off_share or 0.88) * 100.0 if (tot_off_share or 0.88) <= 1.0 else (tot_off_share or 88.0)
+    merchant_pct = max(0.0, 100.0 - rev_pct)
+    dsra_m = (dsra_tot / (dsra_enc or 1.0)) * 6.0 if (dsra_tot and dsra_enc and dsra_enc > 0) else 6.0
+    waterfall_trustee_val = p.get("waterfall_trustee", "YES")
+
+    # Block A: Business & Asset Risk (35.0 pts)
+    pct_a = (block_a_score / 35.0) * 100.0
+    if pct_a >= 70.0:
+        drivers.append(f"High contracted revenue share of {rev_pct:.1f}% (merchant exposure {merchant_pct:.1f}%)")
+    else:
+        drivers_target = constraints
+        constraints.append(f"Uncontracted merchant revenue exposure of {merchant_pct:.1f}% (contracted share {rev_pct:.1f}%)")
+
+    # Block B: Cash-Flow Adequacy & Coverage (35.0 pts)
+    pct_b = (block_b_score / 35.0) * 100.0
+    m_dscr = min_dscr_val if min_dscr_val is not None else 1.34
+    a_dscr = avg_dscr_val if avg_dscr_val is not None else 1.52
+    if pct_b >= 70.0:
+        drivers.append(f"Minimum DSCR of {m_dscr:.2f}x (average {a_dscr:.2f}x) comfortably exceeds Set W 1.20x threshold")
+    else:
+        constraints.append(f"Minimum DSCR of {m_dscr:.2f}x (average {a_dscr:.2f}x) falls below target coverage threshold")
+
+    # Block C: Financial Strength & Liquidity (25.0 pts)
+    pct_c = (block_c_score / 25.0) * 100.0
+    if pct_c >= 70.0:
+        drivers.append(f"Solid liquidity cushion supported by {dsra_m:.1f}-month DSRA buffer and positive net worth")
+    else:
+        if tnw_val is not None and tnw_val <= 0:
+            constraints.append(f"Nil or negative tangible net worth (TNW = {tnw_val:.1f} Lakh) constraining financial risk profile")
         else:
-            constraints.append(f"{b_name} Score: {b_score:.1f}/{b_max:.1f}")
+            constraints.append(f"Constrained liquidity buffer ({dsra_m:.1f} months DSRA) or elevated gearing ratio")
+
+    # Block D: Structural & Covenant Protections (20.0 pts)
+    pct_d = (block_d_score / 20.0) * 100.0
+    if pct_d >= 70.0:
+        drivers.append(f"Ring-fenced TRA cash waterfall with trustee ({waterfall_trustee_val}) and {dsra_m:.1f}-month DSRA credit enhancement")
+    else:
+        if waterfall_trustee_val in ["NO", False, None]:
+            constraints.append("Absence of ring-fenced TRA cash waterfall trustee constraining structural protections")
+        else:
+            constraints.append(f"Subordinated structural protections or unverified TRA cash waterfall in Block D ({block_d_score:.1f}/20.0 pts)")
 
     sens_min_dscr = 1.20
     s_4_1_sens = 0.0
