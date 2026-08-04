@@ -698,51 +698,42 @@
             });
             formData.p90_attestation = p90;
 
+            // Safe field extractors preserving 0 and empty string ""
+            const getVal = (el, fallback) => (el && el.value !== undefined && el.value !== null) ? el.value : fallback;
+            const getNum = (el, fallback) => {
+                if (!el) return fallback;
+                const parsed = parseFloat(el.value);
+                return !isNaN(parsed) ? parsed : fallback;
+            };
+
             // Serialize Debt Instruments
             const origDebt = originalExtracted.debt_instruments || [];
-            formData.debt_instruments = origDebt.map((inst, idx) => {
-                const labelEl = document.getElementById(`debt-label-${idx}`);
-                const amountEl = document.getElementById(`debt-amount-${idx}`);
-                const treatEl = document.getElementById(`debt-treatment-${idx}`);
-                return {
-                    ...inst,
-                    label: labelEl ? labelEl.value : inst.label,
-                    amount: amountEl ? (parseFloat(amountEl.value) || 0) : inst.amount,
-                    treatment: treatEl ? treatEl.value : inst.treatment
-                };
-            });
+            formData.debt_instruments = origDebt.map((inst, idx) => ({
+                ...inst,
+                label: getVal(document.getElementById(`debt-label-${idx}`), inst.label),
+                amount: getNum(document.getElementById(`debt-amount-${idx}`), inst.amount),
+                treatment: getVal(document.getElementById(`debt-treatment-${idx}`), inst.treatment)
+            }));
 
             // Serialize Offtakers
             const origOff = originalExtracted.offtakers || [];
-            formData.offtakers = origOff.map((off, idx) => {
-                const nameEl = document.getElementById(`off-name-${idx}`);
-                const typeEl = document.getElementById(`off-type-${idx}`);
-                const shareEl = document.getElementById(`off-share-${idx}`);
-                const gradeEl = document.getElementById(`off-grade-${idx}`);
-                const agencyEl = document.getElementById(`off-agency-${idx}`);
-                return {
-                    ...off,
-                    name: nameEl ? nameEl.value : off.name,
-                    type: typeEl ? typeEl.value : off.type,
-                    contracted_share: shareEl ? (parseFloat(shareEl.value) || 0) : off.contracted_share,
-                    rating_or_grade: gradeEl ? gradeEl.value : off.rating_or_grade,
-                    rating_agency: agencyEl ? agencyEl.value : off.rating_agency
-                };
-            });
+            formData.offtakers = origOff.map((off, idx) => ({
+                ...off,
+                name: getVal(document.getElementById(`off-name-${idx}`), off.name),
+                type: getVal(document.getElementById(`off-type-${idx}`), off.type),
+                contracted_share: getNum(document.getElementById(`off-share-${idx}`), off.contracted_share),
+                rating_or_grade: getVal(document.getElementById(`off-grade-${idx}`), off.rating_or_grade),
+                rating_agency: getVal(document.getElementById(`off-agency-${idx}`), off.rating_agency)
+            }));
 
             // Serialize DSCR Schedule
             const origDscr = originalExtracted.dscr_schedule || [];
-            formData.dscr_schedule = origDscr.map((item, idx) => {
-                const cfadsEl = document.getElementById(`dscr-cfads-${idx}`);
-                const intEl = document.getElementById(`dscr-interest-${idx}`);
-                const prinEl = document.getElementById(`dscr-principal-${idx}`);
-                return {
-                    ...item,
-                    cfads: cfadsEl ? (parseFloat(cfadsEl.value) || 0) : item.cfads,
-                    interest: intEl ? (parseFloat(intEl.value) || 0) : item.interest,
-                    principal: prinEl ? (parseFloat(prinEl.value) || 0) : item.principal
-                };
-            });
+            formData.dscr_schedule = origDscr.map((item, idx) => ({
+                ...item,
+                cfads: getNum(document.getElementById(`dscr-cfads-${idx}`), item.cfads),
+                interest: getNum(document.getElementById(`dscr-interest-${idx}`), item.interest),
+                principal: getNum(document.getElementById(`dscr-principal-${idx}`), item.principal)
+            }));
 
             try {
                 const res = await fetch(`/api/projects/${projectId}/approve`, {
