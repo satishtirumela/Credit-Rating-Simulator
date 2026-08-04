@@ -273,17 +273,21 @@ def test_results_screen_rendered_playwright():
         # 1. Render Capped Project TP-4
         page.goto("http://127.0.0.1:8000/results/TP-4", wait_until="networkidle")
         tp4_text = page.inner_text("body")
-        assert "Offtaker tier Weak" in tp4_text or "Band capped at BB" in tp4_text
+        assert "Band capped at BB" in tp4_text
+        assert "Offtaker tier Weak" in tp4_text
+        assert "Limited by Override Cap" in tp4_text
 
         # 2. Render Validation Block Project TP-8
         page.goto("http://127.0.0.1:8000/results/TP-8", wait_until="networkidle")
         tp8_text = page.inner_text("body")
-        assert "Validation Block" in tp8_text or "Not Rated" in tp8_text
+        assert "Validation Block — Not Rated" in tp8_text
+        assert "Validation Block Triggered — V1: Average DSCR 1.1000 < Minimum DSCR 1.2000" in tp8_text
 
         # 3. Render Critical Null Project TP-7
         page.goto("http://127.0.0.1:8000/results/TP-7", wait_until="networkidle")
         tp7_text = page.inner_text("body")
-        assert "Insufficient Input" in tp7_text or "Not Rated" in tp7_text
+        assert "Insufficient Input — Not Rated" in tp7_text
+        assert "Critical Blocking Null" in tp7_text
 
         browser.close()
 
