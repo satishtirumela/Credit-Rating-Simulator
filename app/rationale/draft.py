@@ -240,6 +240,10 @@ def draft_rationale(
     # Distance to band edge (d)
     d_val = float(result.get("distance_to_band_edge") or 5.5)
 
+    # Technology-specific threshold set label & floor for DSCR sensitivity
+    sens_set_label = "Set W" if tech_type == "TECH_WIND" else ("Set H" if tech_type == "TECH_HYBRID" else "Set S")
+    sens_floor_val = "1.15x" if tech_type == "TECH_WIND" else ("1.14x" if tech_type == "TECH_HYBRID" else "1.12x")
+
     positive_sensitivities = [
         f"Sustained {tech_label} plant generation performance exceeding P90 resource estimates over consecutive operating years.",
         f"Operational cash flow accumulation or debt deleveraging yielding score gain exceeding distance to band edge (d = {d_val:.1f} pts) toward higher rating tier.",
@@ -248,7 +252,7 @@ def draft_rationale(
 
     negative_sensitivities = [
         f"Persistent {tech_label} generation underperformance falling below P90 resource projections.",
-        f"Compression of minimum DSCR below the 1.20x Set W criteria lockup threshold under stress scenarios.",
+        f"Compression of minimum DSCR below the {sens_set_label} ({sens_floor_val}) criteria lockup threshold under stress scenarios.",
         offtaker_sens_str
     ]
 

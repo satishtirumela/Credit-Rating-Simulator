@@ -1148,10 +1148,13 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
     pct_b = (block_b_score / 35.0) * 100.0
     m_dscr = min_dscr_val if min_dscr_val is not None else 1.34
     a_dscr = avg_dscr_val if avg_dscr_val is not None else 1.52
+    set_label = "Set W" if tech_type == "TECH_WIND" else ("Set H" if tech_type == "TECH_HYBRID" else "Set S")
+    set_floor_val = min_th[2] if len(min_th) > 2 else 1.15
+
     if pct_b >= 70.0:
-        drivers.append(f"Minimum DSCR of {m_dscr:.2f}x (average {a_dscr:.2f}x) comfortably exceeds Set W 1.20x threshold")
+        drivers.append(f"Minimum DSCR of {m_dscr:.2f}x (average {a_dscr:.2f}x) comfortably exceeds {set_label} {set_floor_val:.2f}x threshold")
     else:
-        constraints.append(f"Minimum DSCR of {m_dscr:.2f}x (average {a_dscr:.2f}x) falls below target coverage threshold")
+        constraints.append(f"Minimum DSCR of {m_dscr:.2f}x (average {a_dscr:.2f}x) falls below {set_label} {set_floor_val:.2f}x target threshold")
 
     # Block C: Financial Strength & Liquidity (25.0 pts)
     pct_c = (block_c_score / 25.0) * 100.0
