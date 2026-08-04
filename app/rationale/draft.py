@@ -240,9 +240,19 @@ def draft_rationale(
     # Distance to band edge (d)
     d_val = float(result.get("distance_to_band_edge") or 5.5)
 
-    # Technology-specific threshold set label & floor for DSCR sensitivity
+    # Technology-specific threshold set label & operative floor (applying merchant adjustment shift if merchant_exposure > 25%)
+    rev_share_raw = project.get("contracted_revenue_share")
+    rev_share_val = float(rev_share_raw or 0.88) if rev_share_raw is not None else 0.88
+    if rev_share_val > 1.0:
+        rev_share_val = rev_share_val / 100.0
+    merchant_exp = max(0.0, 1.0 - rev_share_val)
+    merchant_shift = 0.20 if merchant_exp > 0.2500 else 0.00
+
+    base_floor = 1.15 if tech_type == "TECH_WIND" else (1.14 if tech_type == "TECH_HYBRID" else 1.12)
+    op_floor = base_floor + merchant_shift
+
     sens_set_label = "Set W" if tech_type == "TECH_WIND" else ("Set H" if tech_type == "TECH_HYBRID" else "Set S")
-    sens_floor_val = "1.15x" if tech_type == "TECH_WIND" else ("1.14x" if tech_type == "TECH_HYBRID" else "1.12x")
+    sens_floor_val = f"{op_floor:.2f}x"
 
     positive_sensitivities = [
         f"Sustained {tech_label} plant generation performance exceeding P90 resource estimates over consecutive operating years.",
