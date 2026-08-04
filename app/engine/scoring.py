@@ -1245,5 +1245,7 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
         "llcr": llcr_val,
         "gearing": gearing_val,
         "dsra_months": months_dsra_cover,
-        "liquidity_months": _round_half_up((unenc_dsra + unenc_oth_cash) / avg_m_ds, 1) if avg_m_ds and avg_m_ds > 0 else months_dsra_cover
+        "liquidity_months": _round_half_up((unenc_dsra + unenc_oth_cash) / avg_m_ds, 1) if avg_m_ds and avg_m_ds > 0 else months_dsra_cover,
+        "dscr_threshold_set_label": set_label,
+        "dscr_adequate_floor": _round_half_up(set_floor_val, 2)
     }
