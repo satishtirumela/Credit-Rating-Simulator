@@ -477,15 +477,22 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
     else:
         validation_results.append({"rule": "V9", "outcome": "Not Evaluated", "detail": "Missing operand"})
 
-    # V11: cod_date <= calculation_date for operating project
+    # V11: COD date consistency (operating: cod <= calc; pre-COD: cod > calc)
     proj_status = p.get("project_status")
     cod_d = p.get("cod_date")
     calc_d = p.get("calculation_date")
     if proj_status == "STATUS_OPERATING" and cod_d and calc_d:
+        # Both are ISO date strings; lexicographic comparison is correct for YYYY-MM-DD
         if cod_d > calc_d:
             validation_results.append({"rule": "V11", "outcome": "Block", "detail": "COD date later than calculation date"})
         else:
             validation_results.append({"rule": "V11", "outcome": "Pass", "detail": "COD date valid"})
+    elif proj_status == "STATUS_PRECOD" and cod_d and calc_d:
+        # For pre-COD projects, expected COD must be strictly in the future
+        if cod_d <= calc_d:
+            validation_results.append({"rule": "V11", "outcome": "Block", "detail": "Expected COD date is not in the future"})
+        else:
+            validation_results.append({"rule": "V11", "outcome": "Pass", "detail": "Expected COD date is after calculation date"})
     else:
         validation_results.append({"rule": "V11", "outcome": "Not Evaluated", "detail": "Missing operand"})
 
@@ -652,15 +659,30 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
     stat_s = p.get("statutory_clearances_status", "PERMIT_COMPLETE")
     disp_s = p.get("permitting_dispute", "DISPUTE_NONE")
 
-    if proj_status == "STATUS_OPERATING":
-        if disp_s != "DISPUTE_NONE":
-            land_s = "PERMIT_IN_PROGRESS"
-            trans_s = "PERMIT_IN_PROGRESS"
-            stat_s = "PERMIT_IN_PROGRESS"
-        else:
-            land_s = "PERMIT_COMPLETE"
-            trans_s = "PERMIT_COMPLETE"
-            stat_s = "PERMIT_COMPLETE"
+    # BUG FIX: this used to unconditionally force ALL THREE permit statuses to
+    # PERMIT_COMPLETE for any operating project with no dispute, and to PERMIT_IN_PROGRESS
+    # for all three with any dispute -- discarding whatever land/transmission/statutory
+    # status was actually entered. That silently mis-scores any operating project with a
+    # genuinely incomplete permit and no flagged dispute (forced up to Complete), or with a
+    # single named dispute affecting only one item (forced down on all three). CORE §3.1.2's
+    # actual rule is: score the entered statuses as-is; a named dispute item is treated as
+    # In Progress even where its status field reads Complete, and only for the item(s)
+    # actually named. DISPUTE_LAND/DISPUTE_TRANSMISSION/DISPUTE_STATUTORY name exactly one
+    # item each. DISPUTE_MULTIPLE ("more than one -- specify in notes") does not tell the
+    # engine, from structured fields alone, which items are affected -- as a conservative
+    # approximation (biasing toward not over-crediting an unverified permit) it downgrades
+    # any status that reads Complete; this is a known schema limitation, not a full fix --
+    # a proper fix would let Template 1 name the specific affected items for DISPUTE_MULTIPLE.
+    if disp_s == "DISPUTE_LAND" and land_s == "PERMIT_COMPLETE":
+        land_s = "PERMIT_IN_PROGRESS"
+    elif disp_s == "DISPUTE_TRANSMISSION" and trans_s == "PERMIT_COMPLETE":
+        trans_s = "PERMIT_IN_PROGRESS"
+    elif disp_s == "DISPUTE_STATUTORY" and stat_s == "PERMIT_COMPLETE":
+        stat_s = "PERMIT_IN_PROGRESS"
+    elif disp_s == "DISPUTE_MULTIPLE":
+        if land_s == "PERMIT_COMPLETE": land_s = "PERMIT_IN_PROGRESS"
+        if trans_s == "PERMIT_COMPLETE": trans_s = "PERMIT_IN_PROGRESS"
+        if stat_s == "PERMIT_COMPLETE": stat_s = "PERMIT_IN_PROGRESS"
 
     statuses = [land_s, trans_s, stat_s]
     c_comp = statuses.count("PERMIT_COMPLETE")
@@ -785,9 +807,9 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
     elif gov_35 == 2: s_3_5 = 1.5
     elif gov_35 == 3: s_3_5 = 1.0
 
-    if p.get("operating_years_completed") == 1.17 and p.get("technology_type") == "TECH_WIND":
-        s_3_5 = 1.0
-    elif p.get("technology_type") == "TECH_HYBRID" and p.get("project_status") == "STATUS_PRECOD":
+    # Hybrid pre-COD projects cannot demonstrate actual generation performance (SS3.5 §3b);
+    # cap at tier 3 (1.0 pts) regardless of resource-study quality.
+    if p.get("technology_type") == "TECH_HYBRID" and p.get("project_status") == "STATUS_PRECOD":
         s_3_5 = 1.0
 
     # 3.6 Operator & Sponsor Quality (Max 2)
@@ -814,9 +836,6 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
         if gov_36 == 1: s_3_6 = 2.0
         elif gov_36 == 2: s_3_6 = 1.5
         elif gov_36 == 3: s_3_6 = 1.0
-
-    if abs(float(p.get("operating_years_completed", 0.0) or 0.0) - 1.17) < 1e-4 and p.get("technology_type") == "TECH_WIND":
-        s_3_2 = 10.5
 
     block_a_score = s_3_1 + s_3_2 + s_3_3 + s_3_4 + s_3_5 + s_3_6  # Max 35
 
@@ -1130,10 +1149,12 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
     drivers = []
     constraints = []
 
-    # Grounded sub-factor variables
-    rev_pct = (tot_off_share or 0.88) * 100.0 if (tot_off_share or 0.88) <= 1.0 else (tot_off_share or 88.0)
-    merchant_pct = max(0.0, 100.0 - rev_pct)
-    dsra_m = (dsra_tot / (dsra_enc or 1.0)) * 6.0 if (dsra_tot and dsra_enc and dsra_enc > 0) else 6.0
+    # BUG 2 FIX: Use project-level contracted_revenue_share (A.2 field), not offtaker-level N.2 sum
+    contracted_share_proj = float(p.get("contracted_revenue_share", 1.0) or 1.0)
+    rev_pct = _round_half_up(contracted_share_proj * 100.0, 1)
+    merchant_pct = _round_half_up(max(0.0, 100.0 - rev_pct), 1)
+    # BUG 3 FIX: Reuse months_dsra_cover (already computed correctly for Block C at L638-639)
+    dsra_m = months_dsra_cover if months_dsra_cover is not None else 6.0
     waterfall_trustee_val = p.get("waterfall_trustee", "YES")
 
     # Block A: Business & Asset Risk (35.0 pts)
@@ -1141,7 +1162,6 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
     if pct_a >= 70.0:
         drivers.append(f"High contracted revenue share of {rev_pct:.1f}% (merchant exposure {merchant_pct:.1f}%)")
     else:
-        drivers_target = constraints
         constraints.append(f"Uncontracted merchant revenue exposure of {merchant_pct:.1f}% (contracted share {rev_pct:.1f}%)")
 
     # Block B: Cash-Flow Adequacy & Coverage (35.0 pts)
@@ -1149,7 +1169,19 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
     m_dscr = min_dscr_val if min_dscr_val is not None else 1.34
     a_dscr = avg_dscr_val if avg_dscr_val is not None else 1.52
     set_label = "Set W" if tech_type == "TECH_WIND" else ("Set H" if tech_type == "TECH_HYBRID" else "Set S")
-    set_floor_val = min_th[2] if len(min_th) > 2 else 1.15
+    # BUG 6 FIX: cite the threshold for the tier actually achieved, not always the Adequate boundary
+    if m_dscr is not None and m_dscr >= min_th[0]:
+        # Full tier achieved — cite the Strong/Full threshold as the relevant downward boundary
+        set_floor_val = min_th[0]
+    elif m_dscr is not None and m_dscr >= min_th[1]:
+        # Strong tier achieved
+        set_floor_val = min_th[1]
+    elif m_dscr is not None and m_dscr >= min_th[2]:
+        # Adequate tier achieved
+        set_floor_val = min_th[2]
+    else:
+        # Below Adequate or null — cite the Adequate threshold as the target
+        set_floor_val = min_th[2] if len(min_th) > 2 else 1.15
 
     if pct_b >= 70.0:
         drivers.append(f"Minimum DSCR of {m_dscr:.2f}x (average {a_dscr:.2f}x) comfortably exceeds {set_label} {set_floor_val:.2f}x threshold")
@@ -1247,5 +1279,5 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
         "dsra_months": months_dsra_cover,
         "liquidity_months": _round_half_up((unenc_dsra + unenc_oth_cash) / avg_m_ds, 1) if avg_m_ds and avg_m_ds > 0 else months_dsra_cover,
         "dscr_threshold_set_label": set_label,
-        "dscr_adequate_floor": _round_half_up(set_floor_val, 2)
+        "dscr_adequate_floor": _round_half_up(min_th[2] if len(min_th) > 2 else 1.15, 2)
     }

@@ -169,13 +169,18 @@ def draft_rationale(
     conf_reason = result.get("confidence_reason", "")
     cap_notice = result.get("cap_notice")
 
-    min_dscr = result.get("minimum_dscr") or project.get("minimum_dscr") or 1.34
-    avg_dscr = result.get("average_dscr") or project.get("average_dscr") or 1.52
+    min_dscr = result.get("minimum_dscr") if result.get("minimum_dscr") is not None else project.get("minimum_dscr")
+    avg_dscr = result.get("average_dscr") if result.get("average_dscr") is not None else project.get("average_dscr")
+    if min_dscr is None:
+        min_dscr = 1.34
+    if avg_dscr is None:
+        avg_dscr = 1.52
     plcr_val = result.get("plcr")
     llcr_val = result.get("llcr")
     gearing_val = result.get("gearing")
-    dsra_months_val = result.get("dsra_months") or 6.0
-    liquidity_months_val = result.get("liquidity_months") or dsra_months_val
+    # BUG 4 FIX: use is-not-None guard, not falsy check, so a genuine 0.0 is not replaced by 6.0
+    dsra_months_val = result.get("dsra_months") if result.get("dsra_months") is not None else 6.0
+    liquidity_months_val = result.get("liquidity_months") if result.get("liquidity_months") is not None else dsra_months_val
 
     # Executive Summary
     exec_summary = (
@@ -187,13 +192,42 @@ def draft_rationale(
     )
 
     # Block A Narrative (Business & Asset Risk + CRISIL Tier 2 Sector Context)
+    # BUG FIX: this paragraph previously hardcoded wind-specific resource/commodity language
+    # (wind corridors, steel/concrete BOP capex) regardless of the project's actual technology
+    # type, so a solar or hybrid project's Block A narrative read as if it were a wind asset.
+    # Branch the resource-risk sentence by technology, matching the same branching already
+    # used for methodology citations in get_grounded_methodology_citations().
+    if tech_type == "TECH_WIND":
+        resource_risk_sentence = (
+            "As highlighted in the CRISIL Intelligence Indian Renewable Energy Report (January 2026), "
+            "wind energy assets face inherent generation seasonality concentrated in high-wind corridors "
+            "(Gujarat, Rajasthan, Tamil Nadu). Commodity price volatility in steel (~300-500 MT/MW) and "
+            "concrete foundation capex, alongside Balance of Plant (BOP) complexity (20-30% of total "
+            "project cost), represent key physical and execution risk factors."
+        )
+    elif tech_type == "TECH_SOLAR":
+        resource_risk_sentence = (
+            "Solar resource risk is governed by module degradation, soiling losses, and irradiance "
+            "variability against the P90 resource assessment, with Balance of Plant complexity "
+            "(evacuation infrastructure, grid-integration) as the principal execution risk factor."
+        )
+    elif tech_type == "TECH_HYBRID":
+        resource_risk_sentence = (
+            "As a hybrid solar-wind (and, where applicable, storage-coupled) asset, generation "
+            "complementarity across resource types provides some diversification benefit, offset by "
+            "the additional dispatch-controller and shared-infrastructure complexity typical of "
+            "hybrid configurations."
+        )
+    else:
+        resource_risk_sentence = (
+            "Technology-specific generation and execution risk factors apply per the project's "
+            "resource assessment and Balance of Plant configuration."
+        )
+
     block_a_narrative = (
-        f"Business and Asset Risk (Block A) scored {block_a:.1f} / 35.0 points ({(block_a/35.0*100):.1f}%). The project exhibits strong tariff "
-        f"competitiveness with PPAs signed at auction benchmark levels. As highlighted in the CRISIL Intelligence Indian Renewable "
-        f"Energy Report (January 2026), wind energy assets face inherent generation seasonality concentrated in high-wind corridors "
-        f"(Gujarat, Rajasthan, TN). Furthermore, commodity price volatility in steel (~300-500 MT/MW) and concrete foundation capex, "
-        f"alongside Balance of Plant (BOP) complexity (20-30% of total project cost), represent key physical and execution risk factors. "
-        f"The SPV mitigates these through established OEM O&M contracts and independent P90 resource attestation."
+        f"Business and Asset Risk (Block A) scored {block_a:.1f} / 35.0 points ({(block_a/35.0*100):.1f}%). "
+        f"{resource_risk_sentence} The SPV mitigates these through O&M contracts and independent P90 "
+        f"resource attestation."
     )
 
     # Block B Narrative (Cash-Flow Adequacy & Coverage)
@@ -217,10 +251,25 @@ def draft_rationale(
     )
 
     # Block D Narrative (Structural & Covenant Protections)
+    # BUG FIX: this paragraph previously hardcoded "fully funded" DSRA language regardless of the
+    # actual coverage tier (misleading for a project with a Poor/Stretched DSRA, e.g. TP-3 at 1.6
+    # months), and a static "1.20x" lockup threshold regardless of the project's actual
+    # lockup_dscr_threshold field (or whether a distribution lock-up exists at all). Both are now
+    # bound to the project's real inputs.
+    dsra_tier_label = "fully funded" if dsra_months_val >= 9.0 else (
+        "moderately funded" if dsra_months_val >= 6.0 else (
+        "thinly funded" if dsra_months_val >= 3.0 else "under-funded"
+    ))
+    lockup_val = project.get("lockup_dscr_threshold")
+    has_lockup = project.get("distribution_lockup") == "YES" and lockup_val is not None
+    lockup_clause = (
+        f", a restricted payments DSCR lockup threshold of {float(lockup_val):.2f}x"
+        if has_lockup else ""
+    )
     block_d_narrative = (
         f"Structural & Covenant Protections (Block D) scored {block_d:.1f} / 20.0 points ({(block_d/20.0*100):.1f}%). Key credit enhancements include "
-        f"a fully funded {dsra_months_val:.1f}-month Debt Service Reserve Account (DSRA), a Ring-Fenced Trust and Retention Account (TRA) cash waterfall, "
-        f"a restricted payments DSCR lockup threshold of 1.20x, and negative pledge covenants over project assets."
+        f"a {dsra_tier_label} {dsra_months_val:.1f}-month Debt Service Reserve Account (DSRA), a Ring-Fenced Trust and Retention Account (TRA) cash waterfall"
+        f"{lockup_clause}, and the covenant package and negative pledge protections captured at Template 1 Block D."
     )
 
     # Dynamic Rating Sensitivities grounded in CORE v3.0 thresholds
@@ -231,25 +280,45 @@ def draft_rationale(
     if offtakers_list and isinstance(offtakers_list, list) and isinstance(offtakers_list[0], dict):
         primary_off = offtakers_list[0]
         off_name = primary_off.get("name") or "Primary Offtaker"
-        off_grade = primary_off.get("rating_or_grade") or primary_off.get("grade") or "Investment Grade"
+        # BUG FIX: previously defaulted to "Investment Grade" when the rating/grade field was
+        # missing -- defaulting a missing rating to a favorable one understates risk in exactly
+        # the case where the input is incomplete. Default to "Unrated" instead, which is the
+        # conservative (CP_POOR_UNRATED-equivalent) reading CORE §7.1 uses for a missing rating.
+        off_grade = primary_off.get("rating_or_grade") or primary_off.get("grade") or "Unrated"
         off_type = primary_off.get("type") or "DISCOM"
         offtaker_sens_str = f"Payment delays exceeding 90 days from key offtaker {off_name} ({off_type}, rated {off_grade}) or rating downgrade of counterparty DISCOMs."
     else:
         offtaker_sens_str = "Payment delays exceeding 90 days from counterparty DISCOM offtakers or rating downgrade."
 
     # Distance to band edge (d)
-    d_val = float(result.get("distance_to_band_edge") or 5.5)
+    # BUG FIX: "or 5.5" would silently replace a genuine d=0.0 (a project sitting exactly on a
+    # band edge -- the case that most needs an accurate, non-default d value) with a fabricated
+    # 5.5. Same class of defect as the DSRA "or 6.0" fix above -- use an is-not-None guard.
+    _d_raw = result.get("distance_to_band_edge")
+    d_val = float(_d_raw) if _d_raw is not None else 5.5
 
     # Threshold set label & operative DSCR floor directly consumed from scoring engine output
     sens_set_label = result.get("dscr_threshold_set_label") or ("Set W" if tech_type == "TECH_WIND" else ("Set H" if tech_type == "TECH_HYBRID" else "Set S"))
-    op_floor_val = float(result.get("dscr_adequate_floor") or 1.15)
+    _floor_raw = result.get("dscr_adequate_floor")
+    op_floor_val = float(_floor_raw) if _floor_raw is not None else 1.15
     sens_floor_val = f"{op_floor_val:.2f}x"
 
-    positive_sensitivities = [
-        f"Sustained {tech_label} plant generation performance exceeding P90 resource estimates over consecutive operating years.",
-        f"Operational cash flow accumulation or debt deleveraging yielding score gain exceeding distance to band edge (d = {d_val:.1f} pts) toward higher rating tier.",
-        f"Demonstrated track record of timely payment realization from DISCOM offtakers (payment cycle < 60 days)."
-    ]
+    op_years_completed = float(project.get("operating_years_completed") or 0.0)
+    proj_state = project.get("project_status", "STATE_OPERATING_MATURE")
+
+    positive_sensitivities = []
+    # Generation track-record claim: only valid if the project has at least 1 year of operating history
+    # BUG 5 FIX: removed for pre-COD/no-operating-history projects; fabricated for op_years < 1
+    if op_years_completed >= 1.0:
+        positive_sensitivities.append(
+            f"Sustained {tech_label} plant generation performance exceeding P90 resource estimates over consecutive operating years."
+        )
+    # Band-edge upside: always valid — grounded in scoring engine distance_to_band_edge
+    positive_sensitivities.append(
+        f"Operational cash flow accumulation or debt deleveraging yielding score gain exceeding distance to band edge (d = {d_val:.1f} pts) toward higher rating tier."
+    )
+    # BUG 5 FIX: Remove "payment cycle < 60 days" bullet entirely. There is no Template 1 field
+    # backing payment track record; this was fabricated content regardless of project status.
 
     negative_sensitivities = [
         f"Persistent {tech_label} generation underperformance falling below P90 resource projections.",

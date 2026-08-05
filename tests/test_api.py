@@ -199,12 +199,17 @@ def test_home_and_backtest_endpoints():
     assert res_bt_api.status_code == 200
     bt_data = res_bt_api.json()
     assert isinstance(bt_data, list)
-    assert len(bt_data) == 8
+    # 9 reference projects: TP-1 through TP-8, plus NEG-CAP-1 (split out from what was
+    # previously a mislabeled "TP-4" -- a TP-1 clone with a CP_WEAK offtaker, built to
+    # isolate the SS8.4 band-cap mechanism. TP-4 now holds its own genuine data
+    # (Vindhya Hybrid Power Private Limited) instead of duplicating that test case.
+    assert len(bt_data) == 9
 
 
 def test_results_endpoint_content_assertions():
     tp2_inputs = next(p["inputs"] for p in PROJECTS if p["id"] == "TP-2")
     tp4_inputs = next(p["inputs"] for p in PROJECTS if p["id"] == "TP-4")
+    neg_cap_1_inputs = next(p["inputs"] for p in PROJECTS if p["id"] == "NEG-CAP-1")
     tp8_inputs = next(p["inputs"] for p in PROJECTS if p["id"] == "TP-8")
     tp7_inputs = next(p["inputs"] for p in PROJECTS if p["id"] == "TP-7")
 
@@ -216,19 +221,43 @@ def test_results_endpoint_content_assertions():
     res_tp2_score = client.post("/score", json=tp2_inputs)
     assert res_tp2_score.status_code == 200
     tp2_score = res_tp2_score.json()
-    assert tp2_score.get("raw_score") == 84.5
+    # CORE SS3.5's closing rule: literal reading (sub-score 1.5) confirmed as the governing
+    # methodology -- Block A 27.5, raw 84.0, post-notching 77.0. The alternative reading
+    # (sub-score 2.0 -> raw 84.5) remains documented but is not what this engine implements.
+    assert tp2_score.get("raw_score") == 84.0
     assert tp2_score.get("final_band") == "BB"
 
-    # 2. Test Capped Project TP-4 Results Screen & Cap Notice
+    # 2. Test TP-4 Results Screen & Score -- genuine Vindhya Hybrid Power Private Limited
+    # data (180 MW hybrid). This project has NO band cap: its governing offtaker tier is
+    # Strong (DISCOM grade A+ at 58%, C&I AA- at 42%), so its only notch is -7 from SS7.2
+    # refinancing risk (22% partial bullet, no mitigant). The cap-mechanism test case that
+    # used to live under the "TP-4" id has been correctly split out to NEG-CAP-1 below --
+    # see that section for the capped-band assertions.
     res_tp4_html = client.get("/results/TP-4")
     assert res_tp4_html.status_code == 200
 
     res_tp4_score = client.post("/score", json=tp4_inputs)
     assert res_tp4_score.status_code == 200
     tp4_score = res_tp4_score.json()
-    assert "Band capped at BB — Offtaker tier Weak. Score-implied band was AA." in tp4_score.get("cap_notice", "")
+    assert tp4_score.get("raw_score") == 84.5
+    assert tp4_score.get("post_notching_score") == 77.5
+    assert tp4_score.get("indicative_band") == "BB"
+    assert tp4_score.get("final_band") == "BB"
+    assert not tp4_score.get("cap_notice")
 
-    # 3. Test Stage 3 Validation Block Project TP-8 Results Screen & Validation Block
+    # 3. Test Capped Project NEG-CAP-1 Results Screen & Cap Notice -- SS8.4 band-cap
+    # isolation case (TP-1's business/financial profile, cloned, with a CP_WEAK offtaker
+    # substituted in). Raw score 115 (uncapped, same as TP-1), but the Weak offtaker tier
+    # drives a -14 notch to post-notching 101, score-implied AA, capped down to BB.
+    res_neg_cap_html = client.get("/results/NEG-CAP-1")
+    assert res_neg_cap_html.status_code == 200
+
+    res_neg_cap_score = client.post("/score", json=neg_cap_1_inputs)
+    assert res_neg_cap_score.status_code == 200
+    neg_cap_score = res_neg_cap_score.json()
+    assert "Band capped at BB — Offtaker tier Weak. Score-implied band was AA." in neg_cap_score.get("cap_notice", "")
+
+    # 4. Test Stage 3 Validation Block Project TP-8 Results Screen & Validation Block
     res_tp8_html = client.get("/results/TP-8")
     assert res_tp8_html.status_code == 200
 
@@ -239,7 +268,7 @@ def test_results_endpoint_content_assertions():
     assert "Validation Block" in tp8_score.get("confidence_reason", "")
     assert tp8_score.get("validation_results", [{}])[0].get("outcome") == "Block"
 
-    # 4. Test Stage 1 Critical Null Project TP-7 Results Screen & Exit Reason
+    # 5. Test Stage 1 Critical Null Project TP-7 Results Screen & Exit Reason
     res_tp7_html = client.get("/results/TP-7")
     assert res_tp7_html.status_code == 200
 
@@ -253,16 +282,19 @@ def test_results_endpoint_content_assertions():
 def test_results_screen_rendered_playwright():
     """
     Playwright browser test: renders results.html in headless browser against live server
-    to verify rendered DOM text for capped (TP-4), validation-blocked (TP-8), and unrated (TP-7) projects.
+    to verify rendered DOM text for uncapped (TP-4), capped (NEG-CAP-1), validation-blocked
+    (TP-8), and unrated (TP-7) projects.
     """
     from playwright.sync_api import sync_playwright
     from app.pipeline import run_approved_assessment_pipeline
 
     tp4_inputs = next(p["inputs"] for p in PROJECTS if p["id"] == "TP-4")
+    neg_cap_1_inputs = next(p["inputs"] for p in PROJECTS if p["id"] == "NEG-CAP-1")
     tp8_inputs = next(p["inputs"] for p in PROJECTS if p["id"] == "TP-8")
     tp7_inputs = next(p["inputs"] for p in PROJECTS if p["id"] == "TP-7")
 
     run_approved_assessment_pipeline("TP-4", tp4_inputs)
+    run_approved_assessment_pipeline("NEG-CAP-1", neg_cap_1_inputs)
     run_approved_assessment_pipeline("TP-8", tp8_inputs)
     run_approved_assessment_pipeline("TP-7", tp7_inputs)
 
@@ -270,20 +302,31 @@ def test_results_screen_rendered_playwright():
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
 
-        # 1. Render Capped Project TP-4
+        # 1. Render TP-4 -- genuine Vindhya Hybrid Power Private Limited, no band cap
+        # (governing offtaker tier is Strong; the -7 notch comes from SS7.2 refinancing
+        # risk alone). This project must NOT show capped-band language.
         page.goto("http://127.0.0.1:8000/results/TP-4", wait_until="networkidle")
         tp4_text = page.inner_text("body")
-        assert "Band capped at BB" in tp4_text
-        assert "Offtaker tier Weak" in tp4_text
-        assert "Limited by Override Cap" in tp4_text
+        assert "BB" in tp4_text  # final band
+        assert "Band capped at BB" not in tp4_text
+        assert "Limited by Override Cap" not in tp4_text
 
-        # 2. Render Validation Block Project TP-8
+        # 2. Render Capped Project NEG-CAP-1 -- the SS8.4 band-cap isolation case that
+        # previously lived under the "TP-4" id (TP-1's profile, cloned, with a CP_WEAK
+        # offtaker substituted in). Score-implied AA, capped down to BB.
+        page.goto("http://127.0.0.1:8000/results/NEG-CAP-1", wait_until="networkidle")
+        neg_cap_text = page.inner_text("body")
+        assert "Band capped at BB" in neg_cap_text
+        assert "Offtaker tier Weak" in neg_cap_text
+        assert "Limited by Override Cap" in neg_cap_text
+
+        # 3. Render Validation Block Project TP-8
         page.goto("http://127.0.0.1:8000/results/TP-8", wait_until="networkidle")
         tp8_text = page.inner_text("body")
         assert "Validation Block — Not Rated" in tp8_text
         assert "Validation Block Triggered — V1: Average DSCR 1.1000 < Minimum DSCR 1.2000" in tp8_text
 
-        # 3. Render Critical Null Project TP-7
+        # 4. Render Critical Null Project TP-7
         page.goto("http://127.0.0.1:8000/results/TP-7", wait_until="networkidle")
         tp7_text = page.inner_text("body")
         assert "Insufficient Input — Not Rated" in tp7_text

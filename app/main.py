@@ -142,7 +142,9 @@ def get_results_page(project_id: str):
     if not project_data:
         return html_template
 
-    score = doc.get("score") or score_project(project_data)
+    # Always recompute: never serve a persisted score — the stored value may predate engine fixes
+    # and would silently contaminate results.html with stale values (BUG 4 root cause)
+    score = score_project(project_data)
 
     # Server-side HTML pre-rendering block injected into initial-state
     if score.get("final_band") == "Not Rated" or score.get("confidence") == "Not Rated":
