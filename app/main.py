@@ -1,4 +1,4 @@
-"""
+﻿"""
 FastAPI application exposing the Credit Rating Simulator scoring engine HTTP endpoint
 and template file upload screen.
 """
@@ -118,7 +118,7 @@ def _load_reference_projects() -> list:
 
 @app.get("/results/{project_id}", response_class=HTMLResponse)
 def get_results_page(project_id: str):
-    """Serves the CORE §8.4 compliant Results HTML screen with server-side pre-rendered content."""
+    """Serves the CORE section 8.4 compliant Results HTML screen with server-side pre-rendered content."""
     results_path = os.path.join(os.path.dirname(__file__), "templates", "results.html")
     if not os.path.exists(results_path):
         return "<html><body><h1>Results Screen</h1></body></html>"
@@ -142,7 +142,7 @@ def get_results_page(project_id: str):
     if not project_data:
         return html_template
 
-    # Always recompute: never serve a persisted score — the stored value may predate engine fixes
+    # Always recompute: never serve a persisted score -- the stored value may predate engine fixes
     # and would silently contaminate results.html with stale values (BUG 4 root cause)
     score = score_project(project_data)
 
@@ -156,16 +156,16 @@ def get_results_page(project_id: str):
             ssr_content = f"""
             <div id="ssr-container">
                 <h1>{project_id}</h1>
-                <h2>Validation Block — Not Rated</h2>
-                <div class="banner banner-cap">Validation Block Triggered — {block_detail}</div>
-                <p>Pipeline Halted at Stage 3 Validation — Rule V1: Average DSCR below Minimum DSCR</p>
+                <h2>Validation Block -- Not Rated</h2>
+                <div class="banner banner-cap">Validation Block Triggered -- {block_detail}</div>
+                <p>Pipeline Halted at Stage 3 Validation -- Rule V1: Average DSCR below Minimum DSCR</p>
             </div>
             """
         else:
             ssr_content = f"""
             <div id="ssr-container">
                 <h1>{project_id}</h1>
-                <h2>Insufficient Input — Not Rated</h2>
+                <h2>Insufficient Input -- Not Rated</h2>
                 <p>Critical Blocking Null</p>
             </div>
             """
@@ -195,7 +195,7 @@ def get_results_page(project_id: str):
             claim_text = cit.get("display_claim") or cit.get("claim")
             citations_html += f"""
             <details open>
-                <summary>Methodology Citation [{idx+1}]: {cit.get('source_document')} ({cit.get('source_section')})</summary>
+                <summary>Methodology Citation [{idx+1}]: {cit.get("source_document","")} ({cit.get("source_section","")})</summary>
                 <div class="citation-text">"{claim_text}"</div>
             </details>
             """
@@ -203,49 +203,27 @@ def get_results_page(project_id: str):
         ssr_content = f"""
         <div id="ssr-container">
             <h1>{project_id}</h1>
-            <div class="score-val">{post_score:.1f}</div>
-            <div>Raw Score: {raw_score:.1f}</div>
-            <div class="card-title">Scorecard Score</div>
-            <div class="confidence-badge conf-high">{conf} Confidence</div>
-            <div style="font-size: 0.8rem; color: var(--text-muted);">Confidence Reason: {conf_reason}</div>
-            <div>Indicative Band: {ind_band}</div>
-            <div>Final Rating Band: {final_band}</div>
             {band_badge_html}
             {cap_html}
-            <span style="color: #F59E0B;">BB / BBB Boundary (78.0 Pts)</span>
-            <div>Block A: Business & Asset Risk (Max 35.0): {blkA:.1f}</div>
-            <div>Block B: Cash-flow Adequacy & Coverage (Max 35.0): {blkB:.1f}</div>
-            <div>Block C: Financial Strength & Liquidity (Max 25.0): {blkC:.1f}</div>
-            <div>Block D: Structural & Covenant Protections (Max 20.0): {blkD:.1f}</div>
-            <div>13 Applicable Rules</div>
-
-            <div class="card" style="margin-top: 1.5rem;">
-                <div class="card-header">
-                    <span class="card-title">Credit Rationale & Grounded Citations</span>
-                </div>
-                <p style="font-size: 0.95rem; line-height: 1.6; color: var(--text-main); margin-bottom: 1rem;">
-                    {exec_summary}
-                </p>
-                {citations_html}
-            </div>
+            <p>Raw score: {raw_score:.1f} | Post-notching score: {post_score:.1f}</p>
+            <p>Indicative band: {ind_band} | Final band: {final_band}</p>
+            <p>Confidence: {conf} ({conf_reason})</p>
+            <p>Block A: {blkA:.1f} | Block B: {blkB:.1f} | Block C: {blkC:.1f} | Block D: {blkD:.1f}</p>
+            <div class="rationale-summary">{exec_summary}</div>
+            {citations_html}
         </div>
         """
 
-    # Inject SSR container into template body right after <div class="container" id="app-container">
-    html_rendered = html_template.replace(
-        '<div class="container" id="app-container">',
-        f'<div class="container" id="app-container">{ssr_content}'
-    )
-
+    html_rendered = html_template.replace('<!-- SSR_CONTENT -->', ssr_content)
     return html_rendered
 
 
 @app.get("/backtest", response_class=HTMLResponse)
 def get_backtest_page():
-    """Serves the Back-Test Suite Dashboard HTML screen."""
-    backtest_path = os.path.join(os.path.dirname(__file__), "templates", "backtest.html")
-    if os.path.exists(backtest_path):
-        with open(backtest_path, "r", encoding="utf-8") as f:
+    """Serves the Reference Project Back-Test Suite HTML screen."""
+    bt_path = os.path.join(os.path.dirname(__file__), "templates", "backtest.html")
+    if os.path.exists(bt_path):
+        with open(bt_path, "r", encoding="utf-8") as f:
             return f.read()
     return "<html><body><h1>Back-Test Screen</h1></body></html>"
 
@@ -253,7 +231,7 @@ def get_backtest_page():
 @app.post("/api/backtest")
 def run_backtest_api() -> list:
     """
-    Executes batch scoring for all 8 reference project test fixtures (TP-1 to TP-8)
+    Executes batch scoring for all reference project test fixtures
     and returns a summary array.
     """
     from app.engine.scoring import score_project
@@ -340,10 +318,25 @@ def review_page(project_id: str):
 @app.get("/api/projects/{project_id}")
 def get_project_api(project_id: str) -> Dict[str, Any]:
     """
-    Returns the stored project record from Cloud Firestore.
+    Returns the stored project record from Cloud Firestore. If the project has been
+    approved, the score is always recomputed fresh rather than served from the stored
+    document -- a persisted score may predate engine fixes and would otherwise be
+    served silently stale to the results screen's fetchAssessment() call, which only
+    triggers a fresh /score POST when no score is present at all (same root cause
+    as BUG 4 in get_results_page above).
     """
     from app.firestore import get_project_document
-    return get_project_document(project_id)
+    from app.rationale.draft import draft_rationale
+
+    doc = get_project_document(project_id)
+
+    if doc.get("status") == "approved" and doc.get("approved_data"):
+        project_data = doc["approved_data"]
+        result = score_project(project_data)
+        result["rationale"] = draft_rationale(project_data, result)
+        doc["score"] = result
+
+    return doc
 
 
 @app.post("/api/projects/{project_id}/approve")
@@ -398,13 +391,12 @@ def download_rationale_pdf(project_id: str):
         raise HTTPException(status_code=400, detail="Project inputs must be reviewed and approved before downloading rationale PDF")
 
     project_data = doc["approved_data"]
-    score_result = doc.get("score")
 
-    # If score result is missing from Firestore, calculate and persist it
-    if not score_result:
-        score_result = score_project(project_data)
-        score_result["rationale"] = draft_rationale(project_data, score_result)
-        save_score_document(project_id, score_result)
+    # Always recompute: a stored score may predate engine fixes and would otherwise be
+    # streamed into a PDF as silently stale data (same root cause as BUG 4).
+    score_result = score_project(project_data)
+    score_result["rationale"] = draft_rationale(project_data, score_result)
+    save_score_document(project_id, score_result)
 
     pdf_bytes = generate_rationale_pdf(project_id, project_data, score_result)
 
