@@ -1,8 +1,7 @@
 import os
-import shutil
 
 os.makedirs("public", exist_ok=True)
-templates = ["home.html", "upload.html", "review.html", "results.html", "backtest.html"]
+templates = ["home.html", "upload.html", "review.html", "results.html"]
 
 pwa_tags = """    <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#3B82F6">
@@ -28,5 +27,4 @@ for t in templates:
         with open(dst, "w", encoding="utf-8") as f:
             f.write(content)
 
-shutil.copyfile("public/home.html", "public/index.html")
 print("Public PWA static templates prepared in public/")

@@ -13,6 +13,8 @@ import os
 import re
 from typing import Dict, Any, List, Optional
 
+from app.labels import label_for_enum
+
 CORPUS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "corpus")
 MANIFEST_PATH = os.path.join(CORPUS_DIR, "Reference_Corpus_Manifest_v3_0.csv")
 
@@ -285,7 +287,7 @@ def draft_rationale(
         # the case where the input is incomplete. Default to "Unrated" instead, which is the
         # conservative (CP_POOR_UNRATED-equivalent) reading CORE §7.1 uses for a missing rating.
         off_grade = primary_off.get("rating_or_grade") or primary_off.get("grade") or "Unrated"
-        off_type = primary_off.get("type") or "DISCOM"
+        off_type = label_for_enum(primary_off.get("type")) or "DISCOM"
         offtaker_sens_str = f"Payment delays exceeding 90 days from key offtaker {off_name} ({off_type}, rated {off_grade}) or rating downgrade of counterparty DISCOMs."
     else:
         offtaker_sens_str = "Payment delays exceeding 90 days from counterparty DISCOM offtakers or rating downgrade."
@@ -307,16 +309,23 @@ def draft_rationale(
     proj_state = project.get("project_status", "STATE_OPERATING_MATURE")
 
     positive_sensitivities = []
-    # Generation track-record claim: only valid if the project has at least 1 year of operating history
-    # BUG 5 FIX: removed for pre-COD/no-operating-history projects; fabricated for op_years < 1
-    if op_years_completed >= 1.0:
+    if ind_band == "AAA":
+        # AAA is the top of BAND_ORDER -- there is no higher tier to frame d as upgrade runway
+        # toward. d at AAA is the distance DOWN to the AAA floor, not upside room.
         positive_sensitivities.append(
-            f"Sustained {tech_label} plant generation performance exceeding P90 resource estimates over consecutive operating years."
+            "Already at the highest attainable rating band (AAA); no further upgrade sensitivity applies."
         )
-    # Band-edge upside: always valid — grounded in scoring engine distance_to_band_edge
-    positive_sensitivities.append(
-        f"Operational cash flow accumulation or debt deleveraging yielding score gain exceeding distance to band edge (d = {d_val:.1f} pts) toward higher rating tier."
-    )
+    else:
+        # Generation track-record claim: only valid if the project has at least 1 year of operating history
+        # BUG 5 FIX: removed for pre-COD/no-operating-history projects; fabricated for op_years < 1
+        if op_years_completed >= 1.0:
+            positive_sensitivities.append(
+                f"Sustained {tech_label} plant generation performance exceeding P90 resource estimates over consecutive operating years."
+            )
+        # Band-edge upside: always valid — grounded in scoring engine distance_to_band_edge
+        positive_sensitivities.append(
+            f"Operational cash flow accumulation or debt deleveraging yielding score gain exceeding distance to band edge (d = {d_val:.1f} pts) toward higher rating tier."
+        )
     # BUG 5 FIX: Remove "payment cycle < 60 days" bullet entirely. There is no Template 1 field
     # backing payment track record; this was fabricated content regardless of project status.
 

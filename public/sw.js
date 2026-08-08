@@ -1,6 +1,6 @@
 // Service Worker for Credit Rating Simulator PWA
 
-const CACHE_NAME = 'rating-sim-v3.0';
+const CACHE_NAME = 'rating-sim-v4.6';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',

@@ -6,116 +6,168 @@
     <title>Credit Rating Simulator — Home & Assessment Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #0F172A;
-            --bg-card: #1E293B;
-            --bg-card-hover: #334155;
-            --border: #334155;
-            --text-primary: #F8FAFC;
-            --text-secondary: #94A3B8;
-            --accent-blue: #3B82F6;
-            --accent-indigo: #6366F1;
-            --accent-emerald: #10B981;
-            --accent-amber: #F59E0B;
+            --ink: #14171C;
+            --ink-muted: #5B6472;
+            --paper: #F7F6F2;
+            --surface: #FFFFFF;
+            --line: #DEDBD3;
+            --computed: #2D3A8C;
+            --computed-soft: #EEF0FA;
+            --rationale: #7C5E10;
+            --rationale-soft: #F7EFDD;
+            --status-pass: #166534;
+            --status-pass-soft: #E7F3EC;
+            --status-warn: #B45309;
+            --status-warn-soft: #FBF0E4;
+            --status-block: #B91C1C;
+            --status-block-soft: #FBEAEA;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-        body { background-color: var(--bg-primary); color: var(--text-primary); min-height: 100vh; display: flex; flex-direction: column; }
-        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            background-color: var(--paper); color: var(--ink); min-height: 100vh;
+            display: flex; flex-direction: column; font-family: 'Inter', system-ui, sans-serif;
+            font-size: 15px; line-height: 1.5;
+        }
+        .num { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; font-weight: 600; }
+        a { color: inherit; }
+        :focus-visible { outline: 2px solid var(--computed); outline-offset: 2px; border-radius: 3px; }
+
         /* Navigation Bar */
         .navbar {
-            background-color: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--border);
+            background-color: rgba(247, 246, 242, 0.92);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--line);
             position: sticky; top: 0; z-index: 100;
-            padding: 0 2rem; height: 64px;
+            padding: 0 1.75rem; height: 60px;
             display: flex; align-items: center; justify-content: space-between;
+            gap: 1rem; flex-wrap: wrap;
         }
-        .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 1.15rem; color: var(--text-primary); text-decoration: none; }
-        .brand-badge { background: linear-gradient(135deg, #3B82F6, #6366F1); color: white; font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
-        .nav-links { display: flex; gap: 8px; }
+        .brand-mark { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1rem; color: var(--ink); text-decoration: none; letter-spacing: -0.01em; }
+        .brand-mark svg { color: var(--computed); flex-shrink: 0; }
+        .brand-badge {
+            font-family: 'IBM Plex Mono', monospace; background: var(--computed); color: #fff;
+            font-size: 0.68rem; padding: 2px 7px; border-radius: 3px; font-weight: 600; letter-spacing: 0.02em;
+        }
+        .nav-links { display: flex; gap: 4px; }
         .nav-item {
-            color: var(--text-secondary); text-decoration: none; padding: 8px 16px; border-radius: 8px;
-            font-size: 0.9rem; font-weight: 500; transition: all 0.2s ease;
+            color: var(--ink-muted); text-decoration: none; padding: 8px 14px; border-radius: 6px;
+            font-size: 0.88rem; font-weight: 500; transition: all 0.15s ease; border-bottom: 2px solid transparent;
         }
-        .nav-item:hover, .nav-item.active { color: var(--text-primary); background-color: rgba(255,255,255,0.06); }
-        .nav-item.active { border-bottom: 2px solid var(--accent-blue); border-radius: 8px 8px 0 0; }
+        .nav-item:hover { color: var(--ink); background-color: rgba(20,23,28,0.04); }
+        .nav-item.active { color: var(--computed); font-weight: 700; border-bottom-color: var(--computed); }
 
         /* Main Layout */
-        .container { max-width: 1200px; margin: 2.5rem auto; padding: 0 1.5rem; width: 100%; flex: 1; }
+        .container { max-width: 1160px; margin: 0 auto; padding: 2.25rem 1.5rem; width: 100%; flex: 1; }
         .hero {
-            background: linear-gradient(135deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)), url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="none"/><circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.02)" stroke-width="1" fill="none"/></svg>');
-            border: 1px solid var(--border); border-radius: 16px; padding: 3rem 2.5rem; margin-bottom: 2.5rem;
-            position: relative; overflow: hidden;
+            background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--computed);
+            border-radius: 6px; padding: 2.5rem 2.25rem; margin-bottom: 1.75rem;
         }
-        .hero-title { font-size: 2.25rem; font-weight: 800; margin-bottom: 0.75rem; background: linear-gradient(to right, #F8FAFC, #94A3B8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .hero-subtitle { color: var(--text-secondary); font-size: 1.05rem; max-width: 700px; line-height: 1.6; margin-bottom: 1.75rem; }
-        .hero-actions { display: flex; gap: 1rem; }
+        .hero-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--computed); margin-bottom: 0.75rem; }
+        .hero-title { font-size: 1.9rem; font-weight: 800; margin-bottom: 0.6rem; letter-spacing: -0.015em; }
+        .hero-subtitle { color: var(--ink-muted); font-size: 1rem; max-width: 660px; line-height: 1.6; margin-bottom: 1.75rem; }
+        .hero-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
         .btn {
-            display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 10px;
-            font-weight: 600; font-size: 0.95rem; text-decoration: none; cursor: pointer; transition: all 0.2s ease; border: none;
+            display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 6px;
+            font-weight: 600; font-size: 0.9rem; text-decoration: none; cursor: pointer; transition: all 0.15s ease; border: 1px solid transparent;
         }
-        .btn-primary { background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo)); color: white; box-shadow: 0 4px 14px rgba(59,130,246,0.3); }
-        .btn-primary:hover { opacity: 0.95; transform: translateY(-1px); }
-        .btn-secondary { background: var(--bg-card-hover); color: var(--text-primary); border: 1px solid var(--border); }
-        .btn-secondary:hover { background: #475569; }
+        .btn-primary { background: var(--computed); color: #fff; }
+        .btn-primary:hover { background: #253070; }
+        .btn-secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+        .btn-secondary:hover { border-color: var(--ink-muted); }
+
+        /* Band scale strip (signature motif, echoed across the app) */
+        .band-scale-mini { display: flex; align-items: center; gap: 0; margin-top: 1.5rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
+        .band-scale-mini .bs-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-right: 14px; white-space: nowrap; }
+        .bs-track { display: flex; flex: 1; border-radius: 4px; overflow: hidden; border: 1px solid var(--line); }
+        .bs-stop { flex: 1; text-align: center; padding: 6px 2px; font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; font-weight: 700; }
 
         /* Grid Cards */
-        .grid-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
-        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; }
-        .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
-        .card-title { font-size: 1.1rem; font-weight: 700; color: var(--text-primary); }
+        .grid-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem; }
+        .card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 1.5rem; }
+        .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.1rem; }
+        .card-title { font-size: 0.95rem; font-weight: 700; color: var(--ink); }
 
         /* Recent Table */
         .project-table { width: 100%; border-collapse: collapse; text-align: left; }
-        .project-table th { color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; padding: 10px; border-bottom: 1px solid var(--border); }
-        .project-table td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.9rem; }
-        .badge-status { padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; display: inline-block; }
-        .status-approved { background: rgba(16,185,129,0.2); color: #34D399; border: 1px solid rgba(16,185,129,0.4); }
-        .status-draft { background: rgba(245,158,11,0.2); color: #FBBF24; border: 1px solid rgba(245,158,11,0.4); }
-        .status-notrated { background: rgba(239,68,68,0.2); color: #F87171; border: 1px solid rgba(239,68,68,0.4); }
-        
-        .action-link { color: var(--accent-blue); text-decoration: none; font-weight: 600; margin-right: 10px; }
+        .project-table th { color: var(--ink-muted); font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+        .project-table td { padding: 12px 10px; border-bottom: 1px solid var(--line); font-size: 0.88rem; vertical-align: middle; }
+        .badge-status { padding: 3px 9px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; display: inline-block; border: 1px solid; }
+        .status-approved { background: var(--status-pass-soft); color: var(--status-pass); border-color: var(--status-pass); }
+        .status-draft { background: var(--status-warn-soft); color: var(--status-warn); border-color: var(--status-warn); }
+        .status-notrated { background: var(--status-block-soft); color: var(--status-block); border-color: var(--status-block); }
+
+        .action-link { color: var(--computed); text-decoration: none; font-weight: 600; margin-right: 12px; font-size: 0.85rem; }
         .action-link:hover { text-decoration: underline; }
 
         /* Quick Info Box */
-        .info-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
-        .info-item { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .info-label { color: var(--text-secondary); font-size: 0.85rem; }
-        .info-val { font-weight: 600; font-size: 0.9rem; color: var(--text-primary); }
+        .info-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+        .info-item { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+        .info-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .info-label { color: var(--ink-muted); font-size: 0.83rem; }
+        .info-val { font-size: 0.88rem; color: var(--ink); }
 
-        footer { text-align: center; padding: 2rem; color: var(--text-secondary); font-size: 0.8rem; border-top: 1px solid var(--border); margin-top: auto; }
+        footer { text-align: center; padding: 1.75rem; color: var(--ink-muted); font-size: 0.78rem; border-top: 1px solid var(--line); margin-top: auto; }
+
+        @media (max-width: 860px) {
+            .grid-2 { grid-template-columns: 1fr; }
+            .container { padding: 1.5rem 1rem; }
+            .hero { padding: 1.75rem 1.5rem; }
+            .band-scale-mini { flex-direction: column; align-items: flex-start; gap: 8px; }
+        }
+        @media (max-width: 560px) {
+            .navbar { padding: 0 1rem; }
+            .nav-links { gap: 0; }
+            .nav-item { padding: 6px 8px; font-size: 0.8rem; }
+            .project-table { display: block; overflow-x: auto; white-space: nowrap; }
+        }
     </style>
 </head>
 <body>
     <!-- Top Navigation Header -->
     <nav class="navbar">
-        <a href="/" class="nav-brand">
-            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        <a href="/" class="brand-mark">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             Credit Rating Simulator
+            <span class="brand-badge">CORE v3.0</span>
         </a>
         <div class="nav-links">
-            <a href="/" class="nav-item active">Home Dashboard</a>
-            <a href="/upload" class="nav-item">File Upload</a>
-            <a href="/review/TP-2-Mid-Wind" class="nav-item">Project Input Review</a>
-            <a href="/results/TP-2-Mid-Wind" class="nav-item">Results</a>
-            <a href="/backtest" class="nav-item">Back-Test Tab</a>
+            <a href="/" class="nav-item active">Home</a>
+            <a href="/upload" class="nav-item">Upload</a>
+            <a href="/review" class="nav-item">Review</a>
+            <a href="/results" class="nav-item">Results</a>
         </div>
     </nav>
 
     <div class="container">
         <div class="hero">
-            <h1 class="hero-title">Renewable Project Credit Rating Engine</h1>
-            <p class="hero-subtitle">Deterministic 115-point credit rating scorecard for Indian solar, wind, and hybrid project finance SPVs. Grounded strictly in 20 published CRA methodology documents.</p>
+            <div class="hero-eyebrow">Deterministic Scoring Engine · CORE Rating Criteria v3.0</div>
+            <h1 class="hero-title">Clean Energy Credit Rating Framework</h1>
             <div class="hero-actions">
                 <a href="/upload" class="btn btn-primary">
-                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
                     Start Assessment
                 </a>
                 <a href="/results/TP-2-Mid-Wind" class="btn btn-secondary">
                     View Benchmark
                 </a>
+            </div>
+
+            <div class="band-scale-mini">
+                <span class="bs-label">Rating band scale</span>
+                <div class="bs-track">
+                    <div class="bs-stop" style="background:#1B2570; color:#fff;">AAA</div>
+                    <div class="bs-stop" style="background:#232E82; color:#fff;">AA</div>
+                    <div class="bs-stop" style="background:#2D3A8C; color:#fff;">A</div>
+                    <div class="bs-stop" style="background:#4552A8; color:#fff;">BBB</div>
+                    <div class="bs-stop" style="background:#7580C2; color:#fff;">BB</div>
+                    <div class="bs-stop" style="background:#9EA6D6; color:#14171C;">B</div>
+                    <div class="bs-stop" style="background:#C3C9E6; color:#14171C;">C</div>
+                    <div class="bs-stop" style="background:#E6E9F5; color:#14171C;">D</div>
+                </div>
             </div>
         </div>
 
@@ -135,43 +187,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td><strong>TP-2-Mid-Wind</strong></td>
-                            <td>Wind</td>
-                            <td>150 MW</td>
-                            <td><span class="badge-status status-approved">Approved & Scored</span></td>
-                            <td>
-                                <a href="/review/TP-2-Mid-Wind" class="action-link">Review</a>
-                                <a href="/results/TP-2-Mid-Wind" class="action-link">Results</a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><strong>TP-1</strong></td>
-                            <td>Solar</td>
-                            <td>250 MW</td>
-                            <td><span class="badge-status status-approved">Approved</span></td>
-                            <td>
-                                <a href="/results/TP-1" class="action-link">Results</a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><strong>TP-4</strong></td>
-                            <td>Wind (Weak Offtaker)</td>
-                            <td>100 MW</td>
-                            <td><span class="badge-status status-approved">Capped (BB)</span></td>
-                            <td>
-                                <a href="/results/TP-4" class="action-link">Results</a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><strong>TP-8</strong></td>
-                            <td>Solar (Missing Fields)</td>
-                            <td>50 MW</td>
-                            <td><span class="badge-status status-draft">Not Rated</span></td>
-                            <td>
-                                <a href="/results/TP-8" class="action-link">Results</a>
-                            </td>
-                        </tr>
+                        <!-- FIRESTORE_PROJECT_ROWS -->
                     </tbody>
                 </table>
             </div>
@@ -183,23 +199,23 @@
                 <ul class="info-list">
                     <li class="info-item">
                         <span class="info-label">Criteria Architecture</span>
-                        <span class="info-val">CORE v3.0 (115 Pts)</span>
+                        <span class="info-val num">CORE v3.0 (115 Pts)</span>
                     </li>
                     <li class="info-item">
                         <span class="info-label">Engine Determinism</span>
-                        <span class="info-val" style="color: #34D399;">100% Deterministic</span>
+                        <span class="info-val num" style="color: var(--status-pass);">100% Deterministic</span>
                     </li>
                     <li class="info-item">
                         <span class="info-label">Validation Rules</span>
-                        <span class="info-val">13 Applicable Rules</span>
+                        <span class="info-val num">13 Applicable Rules</span>
                     </li>
                     <li class="info-item">
                         <span class="info-label">Corpus Manifest</span>
-                        <span class="info-val">41 Documents Verified</span>
+                        <span class="info-val num">41 Documents Verified</span>
                     </li>
                     <li class="info-item">
-                        <span class="info-label">BBB / BB Boundary</span>
-                        <span class="info-val">78.0 Points</span>
+                        <span class="info-label">Investment Grade Boundary</span>
+                        <span class="info-val num">78.0 Points</span>
                     </li>
                 </ul>
             </div>

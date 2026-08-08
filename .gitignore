@@ -44,3 +44,6 @@ storage_uploads/
 Thumbs.db
 .idea/
 .vscode/
+
+# ---- Claude Code: personal tool preferences, not project config ----
+.claude/settings.local.json

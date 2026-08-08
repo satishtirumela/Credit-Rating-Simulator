@@ -6,6 +6,7 @@ type normalization, and approval workflow state.
 
 import json
 import os
+from datetime import datetime, timezone
 from typing import Dict, Any, Tuple, Optional, List
 from dotenv import load_dotenv
 
@@ -253,7 +254,7 @@ def save_score_document(project_id: str, score_data: Dict[str, Any]) -> Dict[str
     except Exception as err:
         local_path = os.path.join(UPLOAD_DIR, f"firestore_{safe_pid}.json")
         doc_data["score"] = score_data
-        doc_data["scored_at"] = "local_timestamp"
+        doc_data["scored_at"] = datetime.now(timezone.utc).isoformat()
         os.makedirs(os.path.dirname(local_path), exist_ok=True)
         with open(local_path, "w", encoding="utf-8") as f:
             json.dump(doc_data, f, indent=2, default=str)

@@ -24,4 +24,16 @@ Financial Strength 25, Structural Protections 20 — then downward-only notching
 a band map, and band caps. Criteria are synthesised from 20 distinct published
 methodologies (CRISIL, ICRA, CARE, India Ratings, Fitch, Moody's, Brickwork).
 
+## Testing
+
+`pip install -r requirements.txt` installs `playwright`, but the browser binary
+itself is a separate one-time step:
+
+```
+playwright install chromium
+```
+
+Run without it and the Playwright-based tests in `tests/test_api.py` will fail
+to launch a browser.
+
 ## Layout

@@ -1,0 +1,121 @@
+{
+  "_comment": "Single source of truth for human-readable display labels, keyed on the CORE Appendix A enum codes and CORE Appendix B field paths defined in project.schema.json. Both the Python backend (app/labels.py) and the frontend (fetched via GET /api/display-labels) read this exact file so a new code or field only needs to be added once. Codes/paths not listed here fall back to a mechanical humanization (see app/labels.py) rather than showing the raw code.",
+
+  "enum_labels": {
+    "YES": "Yes",
+    "NO": "No",
+    "NOT_APPLICABLE_FIXED_RATE": "Not Applicable (Fixed Rate)",
+
+    "TECH_SOLAR": "Solar PV",
+    "TECH_WIND": "Wind Power",
+    "TECH_HYBRID": "Wind Solar Hybrid",
+
+    "OFFTAKER_CI": "Corporate/Industrial",
+    "OFFTAKER_DISCOM": "DISCOM",
+
+    "TREATMENT_DEBT": "Considered as Debt",
+    "TREATMENT_EQUITY": "Considered as Equity",
+
+    "ATTESTED_P90": "Attested P90",
+
+    "STATUS_OPERATING": "Operating",
+    "STATUS_PRECOD": "Pre-COD",
+
+    "STATE_OPERATING_MATURE": "Operating (Mature)",
+    "STATE_OPERATING_RAMPUP": "Operating (Ramp-Up)",
+    "STATE_PRECOD": "Pre-COD",
+
+    "CP_STRONG": "Strong",
+    "CP_ADEQUATE": "Adequate",
+    "CP_WEAK": "Weak",
+    "CP_POOR_UNRATED": "Poor / Unrated",
+
+    "PERMIT_COMPLETE": "Complete",
+    "PERMIT_IN_PROGRESS": "In Progress",
+    "PERMIT_NOT_STARTED": "Not Started",
+
+    "BOP_CONVENTIONAL": "Conventional",
+    "BOP_MODERATE": "Moderate",
+    "BOP_HIGH": "High",
+
+    "TECH_MAT_STANDARD": "Standard",
+    "TECH_MAT_NEWER": "Newer",
+    "TECH_MAT_UNTESTED": "Untested",
+
+    "CONTR_ADEQUATE": "Adequate",
+    "CONTR_WEAK": "Weak",
+    "CONTR_NOT_APPLICABLE": "Not Applicable",
+
+    "EPC_TURNKEY": "Turnkey",
+    "EPC_MULTI": "Multi-Contract",
+    "EPC_NOT_APPLICABLE": "Not Applicable",
+
+    "EXEC_STANDARD": "Standard",
+    "EXEC_ELEVATED": "Elevated",
+    "EXEC_NOT_APPLICABLE": "Not Applicable",
+
+    "DISPUTE_NONE": "None",
+    "DISPUTE_LAND": "Land",
+    "DISPUTE_TRANSMISSION": "Transmission",
+    "DISPUTE_STATUTORY": "Statutory",
+    "DISPUTE_MULTIPLE": "Multiple",
+
+    "FUND_OCF": "Operating Cash Flow",
+    "FUND_MMRA": "Major Maintenance Reserve Account",
+    "FUND_INCREMENTAL_DEBT": "Incremental Debt",
+    "FUND_SPONSOR": "Sponsor Funding",
+    "FUND_NOT_IDENTIFIED": "Not Identified",
+
+    "ALMM_COMPLIANT": "Compliant",
+    "ALMM_NOT_APPLICABLE": "Not Applicable",
+    "ALMM_EXEMPT_OPEN": "Exempt (Open Category)",
+    "ALMM_NON_COMPLIANT": "Non-Compliant",
+    "ALMM_EXEMPT_CLOSED": "Exempt (Closed Category)",
+
+    "COMP_POS_5": "Competitive Position — Tier 5",
+    "COMP_POS_4": "Competitive Position — Tier 4",
+    "COMP_POS_3": "Competitive Position — Tier 3",
+    "COMP_POS_2": "Competitive Position — Tier 2",
+    "COMP_POS_1": "Competitive Position — Tier 1",
+
+    "PRICE_VOL_5": "Price/Volume Risk — Tier 5",
+    "PRICE_VOL_4": "Price/Volume Risk — Tier 4",
+    "PRICE_VOL_3": "Price/Volume Risk — Tier 3",
+    "PRICE_VOL_2": "Price/Volume Risk — Tier 2",
+    "PRICE_VOL_1": "Price/Volume Risk — Tier 1",
+
+    "REG_STAB_5": "Regulatory Stability — Tier 5",
+    "REG_STAB_4": "Regulatory Stability — Tier 4",
+    "REG_STAB_3": "Regulatory Stability — Tier 3",
+    "REG_STAB_2": "Regulatory Stability — Tier 2",
+    "REG_STAB_1": "Regulatory Stability — Tier 1"
+  },
+
+  "field_labels": {
+    "technology_type": "Technology Type",
+    "project_status": "Project Status",
+    "cod_date": "Commercial Operation Date",
+    "calculation_date": "Calculation Date",
+    "contracted_revenue_share": "Contracted Revenue Share",
+    "p90_plf": "P90 PLF",
+    "p90_attestation_basis": "P90 Attestation Basis",
+    "p90_resource_study": "P90 Resource Study",
+    "p90_preparer": "P90 Attested By",
+    "dscr_schedule / minimum_dscr": "DSCR Schedule or Minimum DSCR",
+    "debt_instruments[].treatment": "Debt Instrument Treatment",
+    "total_debt": "Total Debt",
+    "tangible_net_worth": "Tangible Net Worth",
+    "offtakers[].type": "Offtaker Type",
+    "offtakers[].rating_or_grade": "Offtaker Rating",
+    "competitive_position": "Competitive Position",
+    "price_volume_risk": "Price & Volume Risk",
+    "regulatory_stability": "Regulatory Stability",
+    "reinvestment_ratio": "Reinvestment Ratio",
+    "operator_mw_under_om": "Operator MW Under O&M",
+    "average_dscr": "Average DSCR",
+    "npv_cfads_project_life": "NPV of CFADS (Project Life)",
+    "npv_cfads_loan_life": "NPV of CFADS (Loan Life)",
+    "project_cfo": "Project Cash Flow from Operations",
+    "dsra_total": "DSRA Total"
+  }
+}

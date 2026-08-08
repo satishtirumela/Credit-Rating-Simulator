@@ -30,6 +30,7 @@ Rules:
 - Do NOT include $schema, $id, or any other JSON Schema meta-fields in your output — only the actual field values themselves.
 - Match enumerated fields on the exact stable CODE from Appendix A — never display prose.
 - Extract offtakers[] individually (up to 4), each with name, type, contracted_share, rating_or_grade, rating_agency, rating_date, edition.
+- rating_or_grade, rating_agency, and rating_date are three SEPARATE fields — never combine them into one string, even if the source document shows them together in a single cell or sentence. rating_or_grade must contain ONLY the bare rating symbol (e.g. "AA", "A+", "BB-") with nothing else appended. Example: if the source reads "AA, CRISIL, 12-03-2026", return rating_or_grade="AA", rating_agency="CRISIL", rating_date="2026-03-12" (reformatted to YYYY-MM-DD) — three fields, never rating_or_grade="AA, CRISIL, 12-03-2026".
 - Itemise debt_instruments[] separately — never aggregate subordinated sponsor loans or CCDs into one line.
 - p90_attestation is a single nested object with all four sub-fields (p90_plf, p90_attestation_basis, p90_resource_study, p90_preparer) — populate all four together or leave the object absent.
 - Every percentage is a decimal fraction (0.9700 for 97%), never out of 100.

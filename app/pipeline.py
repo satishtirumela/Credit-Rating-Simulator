@@ -11,9 +11,7 @@ from app.engine.scoring import score_project
 from app.grounding import get_verified_methodology_citations
 from app.rationale.draft import draft_rationale
 from app.pdf import generate_rationale_pdf
-from app.firestore import approve_project_document, get_project_document, UPLOAD_DIR
-import os
-import json
+from app.firestore import approve_project_document, save_score_document
 
 
 def qa_review_assessment(score_result: Dict[str, Any], rationale: Dict[str, Any]) -> Dict[str, Any]:
@@ -76,28 +74,12 @@ def run_approved_assessment_pipeline(project_id: str, approved_data: Dict[str, A
     score_result["qa_review"] = qa_result
 
     # 5. REPORT & PERSIST
-    # Save approved document to Cloud Firestore / local fallback
-    approve_res = approve_project_document(project_id, approved_data)
-    
-    # Save score_result into project document in Firestore / local fallback
-    local_path = os.path.join(UPLOAD_DIR, f"firestore_{project_id}.json")
-    doc_data = get_project_document(project_id)
-    doc_data["approved_data"] = approved_data
-    doc_data["score"] = score_result
-    doc_data["status"] = "approved"
-
-    try:
-        import firebase_admin
-        from firebase_admin import firestore
-        if firebase_admin._apps:
-            db = firestore.client()
-            db.collection("projects").document(project_id).set({"score": score_result}, merge=True)
-    except Exception:
-        pass
-
-    os.makedirs(os.path.dirname(local_path), exist_ok=True)
-    with open(local_path, "w", encoding="utf-8") as f:
-        json.dump(doc_data, f, indent=2, default=str)
+    # approve_project_document sets approved_data/status/field_provenance/approved_at;
+    # save_score_document sets score/scored_at. Both stamp their own timestamp fresh on
+    # every call -- there is no other write path to the score/scored_at fields, so this is
+    # the single point that must be correct for scored_at to ever reflect reality.
+    approve_project_document(project_id, approved_data)
+    save_score_document(project_id, score_result)
 
     # Generate PDF Report
     pdf_bytes = generate_rationale_pdf(project_id, approved_data, score_result)

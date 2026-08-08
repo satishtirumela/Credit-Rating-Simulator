@@ -30,7 +30,7 @@ app = FastAPI(
 async def add_cache_control_headers(request: Request, call_next):
     response = await call_next(request)
     path = request.url.path
-    if path in ["/", "/home", "/upload", "/backtest"] or path.startswith("/review") or path.startswith("/results"):
+    if path in ["/", "/home", "/upload"] or path.startswith("/review") or path.startswith("/results"):
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
@@ -52,10 +52,36 @@ def health_check():
     return {"status": "ok", "service": "Credit Rating Simulator API", "version": "3.0.0"}
 
 
+@app.get("/api/display-labels")
+def get_display_labels() -> Dict[str, Any]:
+    """
+    Serves the single shared enum-code / field-name / corpus-filename display-label lookup
+    (schemas/display_labels.json + corpus/Corpus_Display_Names_v3_0.csv) so the frontend can
+    route every raw code, field path, or corpus filename shown to a user through the exact
+    same table the PDF generator (app/labels.py, app/pdf.py) already uses -- never a second,
+    independently-maintained copy.
+    """
+    from app.labels import get_display_labels as _get_display_labels
+    from app.pdf import get_corpus_display_names
+
+    labels = _get_display_labels()
+    labels["corpus_display_names"] = get_corpus_display_names()
+    return labels
+
+
+# The canonical reference project set for the Home screen's "Reference Projects & Saved
+# Assessments" table -- an explicit list, not "whatever documents currently exist in
+# Firestore", so a stray test/scratch document can never silently appear on the Home page
+# again (see this session's Firestore cleanup). TP-5/TP-6 are canonical CORE fixture ids but
+# have no live Firestore document yet; they're intentionally omitted below rather than shown
+# as fabricated placeholder rows.
+CANONICAL_PROJECT_IDS = ["TP-1", "TP-2", "TP-3", "TP-4", "TP-7", "TP-8", "NEG-CAP-1", "SolairePower", "TP-2-Mid-Wind"]
+
+
 @app.get("/", response_class=HTMLResponse)
 @app.get("/home", response_class=HTMLResponse)
 def get_home_page():
-    """Serves the Home / New Assessment HTML screen with dynamic Firestore project list."""
+    """Serves the Home / New Assessment HTML screen with a live Firestore-backed project list."""
     home_path = os.path.join(os.path.dirname(__file__), "templates", "home.html")
     if not os.path.exists(home_path):
         return "<html><body><h1>Home Screen</h1></body></html>"
@@ -63,37 +89,62 @@ def get_home_page():
     with open(home_path, "r", encoding="utf-8") as f:
         html_template = f.read()
 
-    from app.firestore import get_all_projects_from_firestore
-    stored_projs = get_all_projects_from_firestore()
+    from app.firestore import get_project_document
+    from app.labels import label_for_enum
 
-    if stored_projs:
-        table_rows_html = ""
-        for p in stored_projs:
-            pid = p.get("project_id", "N/A")
-            status = p.get("status", "draft")
-            approved_at = p.get("approved_at", "N/A")
-            inputs = p.get("approved_data") or p.get("extracted_data") or {}
-            pname = inputs.get("project_name", pid)
-            score = p.get("score", {})
-            band = score.get("final_band", "Not Rated") if score else "Not Rated"
+    table_rows_html = ""
+    for pid in CANONICAL_PROJECT_IDS:
+        doc = get_project_document(pid)
+        project_data = doc.get("approved_data") or doc.get("extracted_data")
+        if not project_data:
+            # No real record for this id yet (never uploaded/approved) -- omit rather than
+            # show a fabricated row, same reasoning as TP-5/TP-6 above.
+            continue
 
-            table_rows_html += f"""
-            <tr>
-                <td><strong>{pid}</strong></td>
-                <td>{pname}</td>
-                <td><span class="badge" style="background: rgba(59,130,246,0.15); color: #60A5FA;">{status.upper()}</span></td>
-                <td><strong>{band}</strong></td>
-                <td>{approved_at}</td>
-                <td>
-                    <a href="/review/{pid}" class="action-link">Review</a> | 
-                    <a href="/results/{pid}" class="action-link">Results</a>
-                </td>
-            </tr>
-            """
-        html_rendered = html_template.replace('<!-- FIRESTORE_PROJECT_ROWS -->', table_rows_html)
-        return html_rendered
+        tech_label = label_for_enum(project_data.get("technology_type")) or "—"
+        try:
+            capacity_val = float(project_data.get("installed_capacity_mw_ac"))
+            capacity_label = f"{capacity_val:g} MW"
+        except (TypeError, ValueError):
+            capacity_label = "—"
 
-    return html_template
+        # Always recompute fresh from approved_data rather than trust a persisted score --
+        # a stored score can predate an engine fix and would otherwise show a stale band
+        # here, exactly the kind of cross-screen inconsistency this table was fixed for.
+        if doc.get("status") == "approved" and doc.get("approved_data"):
+            score = score_project(doc["approved_data"])
+        else:
+            score = {}
+
+        final_band = score.get("final_band") or "Not Rated"
+        cap_triggers = score.get("cap_triggers") or []
+        is_capped = any(t.get("binding") for t in cap_triggers)
+
+        if final_band == "Not Rated":
+            status_label = "Not Rated"
+            status_class = "status-draft"
+        elif is_capped:
+            status_label = f"Capped ({final_band})"
+            status_class = "status-approved"
+        else:
+            status_label = final_band
+            status_class = "status-approved"
+
+        table_rows_html += f"""
+        <tr>
+            <td><strong>{pid}</strong></td>
+            <td>{tech_label}</td>
+            <td><span class="num">{capacity_label}</span></td>
+            <td><span class="badge-status {status_class}">{status_label}</span></td>
+            <td>
+                <a href="/review/{pid}" class="action-link">Review</a>
+                <a href="/results/{pid}" class="action-link">Results</a>
+            </td>
+        </tr>
+        """
+
+    html_rendered = html_template.replace('<!-- FIRESTORE_PROJECT_ROWS -->', table_rows_html)
+    return html_rendered
 
 
 @app.get("/upload", response_class=HTMLResponse)
@@ -114,6 +165,22 @@ def _load_reference_projects() -> list:
         except Exception:
             pass
     return []
+
+
+@app.get("/results", response_class=HTMLResponse)
+def get_results_page_default():
+    """
+    Serves the Results screen with no project id in the URL (e.g. from the main nav's
+    Results tab, which has no specific project in context). The client-side script resolves
+    an active project from session state and redirects to /results/{id}, or renders an
+    explicit empty state if no project has been reviewed or uploaded yet in this session --
+    it must never fall back to a hardcoded reference project.
+    """
+    results_path = os.path.join(os.path.dirname(__file__), "templates", "results.html")
+    if os.path.exists(results_path):
+        with open(results_path, "r", encoding="utf-8") as f:
+            return f.read()
+    return "<html><body><h1>Results Screen</h1></body></html>"
 
 
 @app.get("/results/{project_id}", response_class=HTMLResponse)
@@ -218,45 +285,6 @@ def get_results_page(project_id: str):
     return html_rendered
 
 
-@app.get("/backtest", response_class=HTMLResponse)
-def get_backtest_page():
-    """Serves the Reference Project Back-Test Suite HTML screen."""
-    bt_path = os.path.join(os.path.dirname(__file__), "templates", "backtest.html")
-    if os.path.exists(bt_path):
-        with open(bt_path, "r", encoding="utf-8") as f:
-            return f.read()
-    return "<html><body><h1>Back-Test Screen</h1></body></html>"
-
-
-@app.post("/api/backtest")
-def run_backtest_api() -> list:
-    """
-    Executes batch scoring for all reference project test fixtures
-    and returns a summary array.
-    """
-    from app.engine.scoring import score_project
-
-    ref_projs = _load_reference_projects()
-    results = []
-    for proj in ref_projs:
-        p_id = proj["id"]
-        p_label = proj["label"]
-        p_inputs = proj["inputs"]
-
-        scored = score_project(p_inputs)
-        results.append({
-            "id": p_id,
-            "label": p_label,
-            "raw_score": scored.get("raw_score"),
-            "post_notching_score": scored.get("post_notching_score"),
-            "indicative_band": scored.get("indicative_band"),
-            "final_band": scored.get("final_band"),
-            "confidence": scored.get("confidence"),
-            "cap_notice": scored.get("cap_notice")
-        })
-    return results
-
-
 @app.post("/api/upload")
 async def upload_templates(
     project_id: str = Form("default_project"),
@@ -303,6 +331,22 @@ async def upload_templates(
     }
 
 
+@app.get("/review", response_class=HTMLResponse)
+def review_page_default():
+    """
+    Serves the Review screen with no project id in the URL (e.g. from the main nav's Review
+    tab, which has no specific project in context). The client-side script resolves an active
+    project from session state and redirects to /review/{id}, or renders an explicit empty
+    state if no project has been reviewed or uploaded yet in this session -- it must never
+    fall back to a hardcoded reference project.
+    """
+    html_path = os.path.join(os.path.dirname(__file__), "templates", "review.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return f.read()
+    return "<html><body><h1>Review Screen</h1><p>Template not found.</p></body></html>"
+
+
 @app.get("/review/{project_id}", response_class=HTMLResponse)
 def review_page(project_id: str):
     """
@@ -335,6 +379,14 @@ def get_project_api(project_id: str) -> Dict[str, Any]:
         result = score_project(project_data)
         result["rationale"] = draft_rationale(project_data, result)
         doc["score"] = result
+    else:
+        # There is no currently-approved data to score against (project was never approved,
+        # or approved_data is missing/null even though status still reads "approved"). Any
+        # score field persisted from an earlier state no longer corresponds to this document's
+        # current approved_data and must never be served as if it were current -- the client's
+        # fetchAssessment() only re-scores when no score is present at all, so a stale cached
+        # score here would otherwise be displayed unchanged and unvalidated.
+        doc["score"] = None
 
     return doc
 
@@ -384,7 +436,7 @@ def download_rationale_pdf(project_id: str):
     """
     from app.firestore import get_project_document, save_score_document
     from app.rationale.draft import draft_rationale
-    from app.pdf import generate_rationale_pdf
+    from app.pdf import generate_rationale_pdf, build_rationale_filename
 
     doc = get_project_document(project_id)
     if doc.get("status") != "approved" or not doc.get("approved_data"):
@@ -399,9 +451,10 @@ def download_rationale_pdf(project_id: str):
     save_score_document(project_id, score_result)
 
     pdf_bytes = generate_rationale_pdf(project_id, project_data, score_result)
+    filename = build_rationale_filename(project_id, project_data)
 
     headers = {
-        "Content-Disposition": f'inline; filename="{project_id}_Rationale.pdf"'
+        "Content-Disposition": f'inline; filename="{filename}"'
     }
     return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
 

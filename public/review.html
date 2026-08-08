@@ -4,335 +4,164 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Credit Rating Simulator — Review & Approve Inputs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-dark: #0f172a;
-            --card-bg: rgba(30, 41, 59, 0.7);
-            --card-border: rgba(255, 255, 255, 0.1);
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --accent-blue: #38bdf8;
-            --accent-green: #34d399;
-            --accent-amber: #fbbf24;
-            --accent-purple: #c084fc;
-            --badge-extracted: rgba(56, 189, 248, 0.15);
-            --badge-extracted-text: #38bdf8;
-            --badge-corrected: rgba(251, 191, 36, 0.2);
-            --badge-corrected-text: #fbbf24;
+            --ink: #14171C;
+            --ink-muted: #5B6472;
+            --paper: #F7F6F2;
+            --surface: #FFFFFF;
+            --line: #DEDBD3;
+            --computed: #2D3A8C;
+            --computed-soft: #EEF0FA;
+            --status-pass: #166534;
+            --status-pass-soft: #E7F3EC;
+            --status-warn: #B45309;
+            --status-warn-soft: #FBF0E4;
+            --status-block: #B91C1C;
+            --status-block-soft: #FBEAEA;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+        body { background: var(--paper); color: var(--ink); min-height: 100vh; padding-bottom: 110px; font-size: 15px; line-height: 1.5; }
+        .num { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+        :focus-visible { outline: 2px solid var(--computed); outline-offset: 2px; border-radius: 3px; }
 
-        body {
-            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-            color: var(--text-main);
-            min-height: 100vh;
-            padding-bottom: 120px;
+        .navbar {
+            background-color: rgba(247, 246, 242, 0.92); backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 100;
+            padding: 0 1.75rem; height: 52px; display: flex; align-items: center; justify-content: space-between;
+            gap: 1rem; flex-wrap: wrap;
         }
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 0.95rem; color: var(--ink); text-decoration: none; }
+        .brand-badge { font-family: 'IBM Plex Mono', monospace; background: var(--computed); color: #fff; font-size: 0.65rem; padding: 2px 6px; border-radius: 3px; font-weight: 600; }
+        .nav-links { display: flex; gap: 4px; }
+        .nav-item { color: var(--ink-muted); text-decoration: none; padding: 7px 12px; border-radius: 6px; font-size: 0.84rem; font-weight: 500; border-bottom: 2px solid transparent; }
+        .nav-item:hover { color: var(--ink); background: rgba(20,23,28,0.04); }
+        .nav-item.active { color: var(--computed); font-weight: 700; border-bottom-color: var(--computed); }
 
-        header {
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--card-border);
-            padding: 18px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
+        header.page-head {
+            background: var(--surface); border-bottom: 1px solid var(--line);
+            padding: 16px 40px; display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 52px; z-index: 90; flex-wrap: wrap; gap: 10px;
         }
-
-        .logo-title {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-
+        .logo-title { display: flex; align-items: center; gap: 14px; }
         .logo-icon {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 18px;
+            width: 34px; height: 34px; background: var(--computed); color: #fff; border-radius: 6px;
+            display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;
+            font-family: 'IBM Plex Mono', monospace;
         }
-
-        h1 {
-            font-size: 20px;
-            font-weight: 600;
-            letter-spacing: -0.5px;
-        }
-
+        h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
         .status-pill {
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 500;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid var(--card-border);
+            padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 600;
+            background: var(--status-warn-soft); border: 1px solid var(--status-warn); color: var(--status-warn);
+            font-family: 'IBM Plex Mono', monospace;
         }
+        .status-pill.approved { background: var(--status-pass-soft); border-color: var(--status-pass); color: var(--status-pass); }
 
-        .status-pill.approved {
-            background: rgba(52, 211, 153, 0.2);
-            border-color: var(--accent-green);
-            color: var(--accent-green);
-        }
+        .container { max-width: 1240px; margin: 28px auto; padding: 0 24px; }
 
-        .container {
-            max-width: 1280px;
-            margin: 32px auto;
-            padding: 0 24px;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 24px;
-            border-bottom: 1px solid var(--card-border);
-            padding-bottom: 12px;
-            overflow-x: auto;
-        }
-
+        .tabs { display: flex; gap: 4px; margin-bottom: 22px; border-bottom: 1px solid var(--line); padding-bottom: 0; overflow-x: auto; }
         .tab-btn {
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
+            background: transparent; border: none; color: var(--ink-muted); padding: 10px 18px;
+            font-size: 13.5px; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent;
+            white-space: nowrap;
         }
+        .tab-btn:hover { color: var(--ink); }
+        .tab-btn.active { color: var(--computed); border-bottom-color: var(--computed); }
 
-        .tab-btn:hover {
-            color: var(--text-main);
-            background: rgba(255, 255, 255, 0.05);
-        }
+        .tab-content { display: none; }
+        .tab-content.grid-2 { display: none; }
+        .tab-content.active { display: block; }
+        .tab-content.active.grid-2 { display: grid; }
 
-        .tab-btn.active {
-            color: var(--text-main);
-            background: rgba(56, 189, 248, 0.15);
-            border: 1px solid rgba(56, 189, 248, 0.3);
-        }
-
-        .tab-content {
-            display: none;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .tab-content.grid-2 {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .tab-content.active.grid-2 {
-            display: grid;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .grid-2 {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-            gap: 20px;
-        }
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; }
 
         .card {
-            background: var(--card-bg);
-            backdrop-filter: blur(16px);
-            border: 1px solid var(--card-border);
-            border-radius: 14px;
-            padding: 24px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--computed);
+            border-radius: 6px; padding: 22px;
         }
-
         .card-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 18px;
-            color: var(--accent-blue);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            font-size: 15px; font-weight: 700; margin-bottom: 16px; color: var(--ink);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .card-title::after {
+            content: 'COMPUTED INPUT'; font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 700;
+            letter-spacing: 0.05em; color: var(--computed); background: var(--computed-soft);
+            padding: 3px 7px; border-radius: 3px;
         }
 
-        .field-group {
-            margin-bottom: 16px;
-        }
-
-        .field-label-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 6px;
-        }
-
-        label {
-            font-size: 13px;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-
-        .badge {
-            font-size: 11px;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-
-        .badge.extracted {
-            background: var(--badge-extracted);
-            color: var(--badge-extracted-text);
-            border: 1px solid rgba(56, 189, 248, 0.3);
-        }
-
-        .badge.user-corrected {
-            background: var(--badge-corrected);
-            color: var(--badge-corrected-text);
-            border: 1px solid rgba(251, 191, 36, 0.4);
-        }
+        .field-group { margin-bottom: 15px; }
+        .field-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        label { font-size: 12.5px; color: var(--ink-muted); font-weight: 600; letter-spacing: 0.01em; }
 
         .info-banner {
-            background: rgba(56, 189, 248, 0.08);
-            border: 1px solid rgba(56, 189, 248, 0.25);
-            color: #93c5fd;
-            border-radius: 8px;
-            padding: 0.65rem 1rem;
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 1.25rem;
-            grid-column: 1 / -1;
-            width: 100%;
+            background: var(--computed-soft); border: 1px solid #C7CCED; color: #232D6E;
+            border-radius: 5px; padding: 0.65rem 1rem; font-size: 0.83rem; display: flex; align-items: center;
+            gap: 8px; margin-bottom: 1.1rem; grid-column: 1 / -1; width: 100%;
         }
+        .info-banner svg { flex-shrink: 0; color: var(--computed); }
 
         input[type="text"], input[type="number"], select {
-            width: 100%;
-            background: #1e293b;
-            border: 1px solid #475569;
-            border-radius: 8px;
-            padding: 10px 14px;
-            color: var(--text-main);
-            font-size: 14px;
-            transition: all 0.2s ease;
+            width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 5px;
+            padding: 9px 12px; color: var(--ink); font-size: 13.5px; font-family: inherit; transition: all 0.15s ease;
         }
+        input[type="number"] { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+        input:focus, select:focus { outline: none; border-color: var(--computed); box-shadow: 0 0 0 3px var(--computed-soft); }
 
-        input:focus, select:focus {
-            outline: none;
-            border-color: var(--accent-blue);
-            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
-        }
+        .table-wrapper { overflow-x: auto; border-radius: 6px; border: 1px solid var(--line); }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--line); }
+        th { background: var(--paper); color: var(--ink-muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.03em; }
+        td input, td select { padding: 6px 9px; font-size: 13px; }
+        tbody tr:last-child td { border-bottom: none; }
 
-        .table-wrapper {
-            overflow-x: auto;
-            border-radius: 8px;
-            border: 1px solid var(--card-border);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-
-        th, td {
-            padding: 10px 14px;
-            text-align: left;
-            border-bottom: 1px solid var(--card-border);
-        }
-
-        th {
-            background: rgba(15, 23, 42, 0.8);
-            color: var(--text-muted);
-            font-weight: 600;
-        }
-
-        td input {
-            padding: 6px 10px;
-            font-size: 13px;
-        }
+        .pct-field { display: flex; align-items: center; gap: 6px; }
+        .pct-field input { flex: 1; min-width: 0; }
+        .pct-field .pct-suffix { color: var(--ink-muted); font-size: 13px; font-family: 'IBM Plex Mono', monospace; }
 
         .bottom-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(15, 23, 42, 0.9);
-            backdrop-filter: blur(16px);
-            border-top: 1px solid var(--card-border);
-            padding: 16px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            z-index: 200;
+            position: fixed; bottom: 0; left: 0; right: 0; background: rgba(247, 246, 242, 0.95);
+            backdrop-filter: blur(10px); border-top: 1px solid var(--line); padding: 14px 40px;
+            display: flex; justify-content: space-between; align-items: center; z-index: 200; gap: 12px; flex-wrap: wrap;
         }
-
         .btn {
-            background: linear-gradient(135deg, var(--accent-blue), #0284c7);
-            color: #0f172a;
-            border: none;
-            padding: 12px 28px;
-            border-radius: 10px;
-            font-weight: 700;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 4px 20px rgba(56, 189, 248, 0.3);
+            background: var(--computed); color: #fff; border: none; padding: 11px 26px; border-radius: 6px;
+            font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px;
         }
-
-        .btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 24px rgba(56, 189, 248, 0.4);
+        .btn:hover { background: #253070; }
+        .btn:disabled { opacity: 0.75; cursor: not-allowed; }
+        .btn-spinner {
+            width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff;
+            border-radius: 50%; display: inline-block; animation: btn-spin 0.7s linear infinite; vertical-align: -2px;
         }
+        @keyframes btn-spin { to { transform: rotate(360deg); } }
 
         .score-modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(8px);
-            z-index: 300;
-            align-items: center;
-            justify-content: center;
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(20, 23, 28, 0.55); z-index: 300; align-items: center; justify-content: center;
         }
-
         .score-card {
-            background: #1e293b;
-            border: 1px solid var(--accent-green);
-            border-radius: 18px;
-            padding: 32px;
-            max-width: 600px;
-            width: 90%;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-            text-align: center;
+            background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--computed);
+            border-radius: 8px; padding: 32px; max-width: 600px; width: 90%; text-align: center;
+        }
+        .score-rating { font-size: 44px; font-weight: 800; color: var(--computed); margin: 14px 0; font-family: 'IBM Plex Mono', monospace; }
 
-        .score-rating {
-            font-size: 48px;
-            font-weight: 900;
-            color: var(--accent-green);
-            margin: 16px 0;
+        @media (max-width: 860px) {
+            header.page-head { padding: 14px 20px; top: 52px; }
+            .container { padding: 0 16px; margin: 20px auto; }
+            .bottom-bar { padding: 12px 20px; }
+        }
+        @media (max-width: 560px) {
+            .navbar { padding: 0 1rem; }
+            .nav-links { gap: 0; }
+            .nav-item { padding: 6px 8px; font-size: 0.78rem; }
+            .card-title { flex-direction: column; align-items: flex-start; gap: 6px; }
+            .card-title::after { align-self: flex-start; }
+            .bottom-bar { flex-direction: column; align-items: stretch; }
+            .bottom-bar .btn { justify-content: center; }
         }
     </style>
     <link rel="manifest" href="/manifest.json">
@@ -346,35 +175,41 @@
     </script>
 
 </head>
-    <nav style="background-color: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--card-border); padding: 0 40px; height: 50px; display: flex; align-items: center; justify-content: space-between;">
-        <a href="/" style="display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1rem; color: #f8fafc; text-decoration: none;">
+<body>
+    <nav class="navbar">
+        <a href="/" class="brand">
             <span>Credit Rating Simulator</span>
-            <span style="background: linear-gradient(135deg, #3B82F6, #6366F1); color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px;">CORE v3.0</span>
+            <span class="brand-badge">CORE v3.0</span>
         </a>
-        <div style="display: flex; gap: 8px;">
-            <a href="/" style="color: #94a3b8; text-decoration: none; padding: 6px 12px; font-size: 0.85rem; font-weight: 500;">Home</a>
-            <a href="/upload" style="color: #94a3b8; text-decoration: none; padding: 6px 12px; font-size: 0.85rem; font-weight: 500;">Upload</a>
-            <a href="/review/TP-2-Mid-Wind" style="color: #f8fafc; text-decoration: none; padding: 6px 12px; font-size: 0.85rem; font-weight: 600; border-bottom: 2px solid #38bdf8;">Review</a>
-            <a href="/results/TP-2-Mid-Wind" style="color: #94a3b8; text-decoration: none; padding: 6px 12px; font-size: 0.85rem; font-weight: 500;">Results</a>
-            <a href="/backtest" style="color: #94a3b8; text-decoration: none; padding: 6px 12px; font-size: 0.85rem; font-weight: 500;">Back-Test Tab</a>
+        <div class="nav-links">
+            <a href="/" class="nav-item">Home</a>
+            <a href="/upload" class="nav-item">Upload</a>
+            <a href="/review" id="nav-review-link" class="nav-item active">Review</a>
+            <a href="/results" id="nav-results-link" class="nav-item">Results</a>
         </div>
     </nav>
 
-    <header>
+    <header class="page-head">
         <div class="logo-title">
             <div class="logo-icon">CRS</div>
             <div>
                 <h1>Project Input Review & Approval</h1>
-                <div style="font-size: 12px; color: var(--text-muted);" id="project-id-sub">Loading project...</div>
+                <div style="font-size: 12px; color: var(--ink-muted);" id="project-id-sub">Loading project...</div>
             </div>
         </div>
         <div id="status-pill" class="status-pill">Status: Draft</div>
     </header>
 
     <div class="container">
+        <div id="empty-state" style="display: none; text-align: center; padding: 4rem 1rem;">
+            <h2 style="font-size: 1.3rem; margin-bottom: 0.75rem;">No Project Loaded</h2>
+            <p style="color: var(--ink-muted); margin-bottom: 1.5rem;">Upload a project to begin review.</p>
+            <a href="/upload" class="btn" style="display: inline-flex; text-decoration: none;">Go to Upload</a>
+        </div>
+        <div id="review-content">
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('general')">1. General & Notching</button>
-            <button class="tab-btn" onclick="switchTab('financials')">2. Debt & Financials</button>
+            <button class="tab-btn active" onclick="switchTab('general')">1. Project</button>
+            <button class="tab-btn" onclick="switchTab('financials')">2. Debt</button>
             <button class="tab-btn" onclick="switchTab('offtakers')">3. Offtakers</button>
             <button class="tab-btn" onclick="switchTab('dscr')">4. DSCR Schedule</button>
             <button class="tab-btn" onclick="switchTab('p90')">5. P90 Attestation</button>
@@ -385,10 +220,10 @@
             <div id="tab-general" class="tab-content active grid-2">
                 <div class="info-banner">
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <span>Values extracted from source documents. Review and edit as necessary.</span>
+                    <span>Values extracted from source documents feed directly into the Python scoring engine. Review and correct before scoring.</span>
                 </div>
                 <div class="card">
-                    <div class="card-title">Project Identity</div>
+                    <div class="card-title">Project</div>
                     <div class="field-group">
                         <div class="field-label-row">
                             <label>Project Name</label>
@@ -400,9 +235,9 @@
                             <label>Technology Type</label>
                         </div>
                         <select id="field-technology_type" name="technology_type" onchange="markChanged('technology_type')">
-                            <option value="TECH_SOLAR">TECH_SOLAR — Solar PV</option>
-                            <option value="TECH_WIND">TECH_WIND — Wind Power</option>
-                            <option value="TECH_HYBRID">TECH_HYBRID — Hybrid Wind-Solar</option>
+                            <option value="TECH_SOLAR">Solar PV</option>
+                            <option value="TECH_WIND">Wind Power</option>
+                            <option value="TECH_HYBRID">Wind Solar Hybrid</option>
                         </select>
                     </div>
                     <div class="field-group">
@@ -420,12 +255,15 @@
                 </div>
 
                 <div class="card">
-                    <div class="card-title">Notching & Governance Inputs</div>
+                    <div class="card-title">Notching</div>
                     <div class="field-group">
                         <div class="field-label-row">
-                            <label>Contracted Revenue Share</label>
+                            <label>Contracted Revenue Share (%)</label>
                         </div>
-                        <input type="number" step="0.01" id="field-contracted_revenue_share" name="contracted_revenue_share" oninput="markChanged('contracted_revenue_share')">
+                        <div class="pct-field">
+                            <input type="number" step="0.01" id="field-contracted_revenue_share" name="contracted_revenue_share" oninput="markChanged('contracted_revenue_share')">
+                            <span class="pct-suffix">%</span>
+                        </div>
                     </div>
                     <div class="field-group">
                         <div class="field-label-row">
@@ -452,17 +290,17 @@
             <div id="tab-financials" class="tab-content grid-2">
                 <div class="info-banner">
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <span>Values extracted from source documents. Review and edit as necessary.</span>
+                    <span>Values extracted from source documents feed directly into the Python scoring engine. Review and correct before scoring.</span>
                 </div>
                 <div class="card" style="grid-column: 1 / -1;">
-                    <div class="card-title">Itemised Debt Instruments</div>
+                    <div class="card-title">Debt Instruments</div>
                     <div class="table-wrapper">
                         <table id="table-debt">
                             <thead>
                                 <tr>
                                     <th>Instrument Label</th>
-                                    <th>Amount (Lakh)</th>
-                                    <th>Treatment</th>
+                                    <th>Amount in Lakhs</th>
+                                    <th>Considered as</th>
                                 </tr>
                             </thead>
                             <tbody id="debt-tbody"></tbody>
@@ -475,10 +313,10 @@
             <div id="tab-offtakers" class="tab-content grid-2">
                 <div class="info-banner">
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <span>Values extracted from source documents. Review and edit as necessary.</span>
+                    <span>Values extracted from source documents feed directly into the Python scoring engine. Review and correct before scoring.</span>
                 </div>
                 <div class="card" style="grid-column: 1 / -1;">
-                    <div class="card-title">Offtakers List</div>
+                    <div class="card-title">Offtakers</div>
                     <div class="table-wrapper">
                         <table id="table-offtakers">
                             <thead>
@@ -487,7 +325,8 @@
                                     <th>Type</th>
                                     <th>Share</th>
                                     <th>Rating / Grade</th>
-                                    <th>Agency</th>
+                                    <th>Rated By</th>
+                                    <th>Rating Date</th>
                                 </tr>
                             </thead>
                             <tbody id="offtakers-tbody"></tbody>
@@ -500,18 +339,18 @@
             <div id="tab-dscr" class="tab-content">
                 <div class="info-banner">
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <span>Values extracted from source documents. Review and edit as necessary.</span>
+                    <span>Values extracted from source documents feed directly into the Python scoring engine. Review and correct before scoring.</span>
                 </div>
                 <div class="card">
-                    <div class="card-title">Debt Service Coverage Ratio (DSCR) Schedule</div>
+                    <div class="card-title">DSCR Schedule</div>
                     <div class="table-wrapper">
                         <table id="table-dscr">
                             <thead>
                                 <tr>
                                     <th>Debt Year</th>
-                                    <th>CFADS (Lakh)</th>
-                                    <th>Interest (Lakh)</th>
-                                    <th>Principal (Lakh)</th>
+                                    <th>CFADS in Lakhs</th>
+                                    <th>Interest in Lakhs</th>
+                                    <th>Principal in Lakhs</th>
                                 </tr>
                             </thead>
                             <tbody id="dscr-tbody"></tbody>
@@ -524,21 +363,24 @@
             <div id="tab-p90" class="tab-content grid-2">
                 <div class="info-banner">
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <span>Values extracted from source documents. Review and edit as necessary.</span>
+                    <span>Values extracted from source documents feed directly into the Python scoring engine. Review and correct before scoring.</span>
                 </div>
                 <div class="card">
-                    <div class="card-title">P90 Attestation Sub-Fields</div>
+                    <div class="card-title">P90 Attestation</div>
                     <div class="field-group">
                         <div class="field-label-row">
                             <label>P90 PLF</label>
                         </div>
-                        <input type="number" step="0.01" id="field-p90_attestation.p90_plf" oninput="markChanged('p90_attestation.p90_plf')">
+                        <div class="pct-field">
+                            <input type="number" step="0.01" id="field-p90_attestation.p90_plf" oninput="markChanged('p90_attestation.p90_plf')">
+                            <span class="pct-suffix">%</span>
+                        </div>
                     </div>
                     <div class="field-group">
                         <div class="field-label-row">
                             <label>P90 Basis</label>
                         </div>
-                        <input type="text" id="field-p90_attestation.p90_attestation_basis" oninput="markChanged('p90_attestation.p90_attestation_basis')">
+                        <select id="field-p90_attestation.p90_attestation_basis" onchange="markChanged('p90_attestation.p90_attestation_basis')"></select>
                     </div>
                     <div class="field-group">
                         <div class="field-label-row">
@@ -548,45 +390,158 @@
                     </div>
                     <div class="field-group">
                         <div class="field-label-row">
-                            <label>Preparer Signature</label>
+                            <label>Attested By</label>
                         </div>
                         <input type="text" id="field-p90_attestation.p90_preparer" oninput="markChanged('p90_attestation.p90_preparer')">
                     </div>
                 </div>
             </div>
         </form>
+        </div>
     </div>
 
     <!-- Bottom Floating Action Bar -->
-    <div class="bottom-bar">
-        <div style="font-size: 14px; color: var(--text-muted);" id="provenance-summary">
+    <div class="bottom-bar" id="bottom-bar">
+        <div style="font-size: 13px; color: var(--ink-muted);" id="provenance-summary">
             Inspect extracted fields and make corrections if needed.
         </div>
-        <button class="btn" onclick="submitApproval()">
-            Compute Score
+        <button class="btn" id="score-rating-btn" onclick="submitApproval()">
+            <span id="score-rating-spinner" class="btn-spinner" style="display: none;"></span>
+            <span id="score-rating-label">Score &amp; Rating</span>
         </button>
     </div>
 
     <!-- Score Modal -->
     <div class="score-modal" id="score-modal">
         <div class="score-card">
-            <h2 style="font-size: 22px; color: var(--accent-blue);">Credit Score Result</h2>
+            <h2 style="font-size: 20px; color: var(--ink);">Credit Score Result</h2>
             <div class="score-rating" id="modal-rating">AA</div>
-            <p id="modal-sub" style="color: var(--text-muted); margin-bottom: 24px;"></p>
+            <p id="modal-sub" style="color: var(--ink-muted); margin-bottom: 22px;"></p>
             <button class="btn" style="margin: 0 auto;" onclick="closeModal()">Close Window</button>
         </div>
     </div>
 
     <script>
-        const projectId = window.location.pathname.split('/').pop() || 'TP-2-Mid-Wind';
+        // /review/{id} carries the project explicitly; bare /review (e.g. from the main nav,
+        // which has no specific project in context) has none. In that case fall back to whichever
+        // project was most recently reviewed/uploaded/scored in THIS browser session -- never to
+        // a hardcoded reference project -- and if there isn't one, show an empty state instead of
+        // guessing.
+        const ACTIVE_PROJECT_KEY = 'activeProjectId';
+        const pathParts = window.location.pathname.split('/').filter(Boolean);
+        const urlProjectId = pathParts.length > 1 ? decodeURIComponent(pathParts[1]) : null;
+
+        let projectId = urlProjectId;
+        let redirecting = false;
+
+        if (projectId) {
+            sessionStorage.setItem(ACTIVE_PROJECT_KEY, projectId);
+        } else {
+            const storedProjectId = sessionStorage.getItem(ACTIVE_PROJECT_KEY);
+            if (storedProjectId) {
+                redirecting = true;
+                window.location.replace(`/review/${storedProjectId}`);
+            }
+        }
+
         let projectRecord = null;
         let originalExtracted = {};
+
+        // The top nav bar is static HTML rendered before this script runs. Point its Review/Results
+        // links at the project actually in view here (or the bare route, if there isn't one) so
+        // navigating via the nav bar never silently jumps to a hardcoded reference project.
+        document.getElementById('nav-review-link').href = projectId ? `/review/${projectId}` : '/review';
+        document.getElementById('nav-results-link').href = projectId ? `/results/${projectId}` : '/results';
 
         function switchTab(tabId) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             event.target.classList.add('active');
             document.getElementById(`tab-${tabId}`).classList.add('active');
+        }
+
+        // Single shared enum-code -> display-label lookup (schemas/display_labels.json, served via
+        // GET /api/display-labels), so every enum-valued field on this page routes through the same
+        // table the PDF generator uses -- never a per-field hardcoded label dict.
+        let DISPLAY_LABELS = { enum_labels: {}, field_labels: {} };
+        const displayLabelsPromise = fetch('/api/display-labels')
+            .then(r => r.json())
+            .catch(() => ({ enum_labels: {}, field_labels: {} }));
+
+        function labelForEnum(code) {
+            if (!code) return '';
+            if (DISPLAY_LABELS.enum_labels && DISPLAY_LABELS.enum_labels[code]) return DISPLAY_LABELS.enum_labels[code];
+            return String(code).replace(/-/g, '_').split('_').filter(Boolean)
+                .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        }
+
+        function enumOptionsHtml(codes, rawValue, opts) {
+            opts = opts || {};
+            const val = (rawValue === null || rawValue === '') ? '' : (rawValue || opts.defaultCode || '');
+            const entries = [['', opts.blankLabel || '-- Select --'], ...codes.map(c => [c, labelForEnum(c)])];
+            return entries.map(([code, label]) =>
+                `<option value="${code}" ${code === val ? 'selected' : ''}>${label}</option>`
+            ).join('');
+        }
+
+        function treatmentOptionsHtml(rawValue) {
+            // Blank stays blank (an intentional null, blocked by V14); any other/missing
+            // value defaults to TREATMENT_DEBT per CORE Section 9.3's stated schema default.
+            return enumOptionsHtml(['TREATMENT_DEBT', 'TREATMENT_EQUITY'], rawValue, { defaultCode: 'TREATMENT_DEBT' });
+        }
+
+        function offtakerTypeOptionsHtml(rawValue) {
+            return enumOptionsHtml(['OFFTAKER_CI', 'OFFTAKER_DISCOM'], rawValue);
+        }
+
+        // Rating symbols recognized by the Section 7.1 counterparty-tier crosswalk (app/engine/scoring.py
+        // _get_offtaker_tier). The valid symbol set differs by offtaker type, so this is constrained to
+        // exactly the symbols the crosswalk resolves for the given type -- never a free-text field --
+        // to guarantee the value submitted here can always be classified into a tier.
+        const RATING_SYMBOLS_BY_TYPE = {
+            OFFTAKER_DISCOM: ['A+', 'A', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D'],
+            OFFTAKER_CI: ['AAA', 'AA+', 'AA', 'AA-', 'A+', 'A', 'A-', 'BBB+', 'BBB', 'BBB-',
+                          'BB+', 'BB', 'BB-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D']
+        };
+
+        function ratingSymbolOptionsHtml(offType, rawValue) {
+            const symbols = RATING_SYMBOLS_BY_TYPE[offType] || RATING_SYMBOLS_BY_TYPE.OFFTAKER_CI;
+            const val = rawValue || '';
+            const entries = [['', '-- Select --'], ...symbols.map(s => [s, s])];
+            return entries.map(([code, label]) =>
+                `<option value="${code}" ${code === val ? 'selected' : ''}>${label}</option>`
+            ).join('');
+        }
+
+        function refreshOffGradeOptions(idx) {
+            const typeEl = document.getElementById(`off-type-${idx}`);
+            const gradeEl = document.getElementById(`off-grade-${idx}`);
+            if (!typeEl || !gradeEl) return;
+            const currentVal = gradeEl.value;
+            gradeEl.innerHTML = ratingSymbolOptionsHtml(typeEl.value, currentVal);
+        }
+
+        function p90BasisOptionsHtml(rawValue) {
+            // ATTESTED_P90 is the schema's only permitted value (a `const`, not a real choice) --
+            // still offered as a real select so a genuinely missing attestation shows as blank,
+            // not silently defaulted.
+            return enumOptionsHtml(['ATTESTED_P90'], rawValue);
+        }
+
+        // Offtaker share and P90 PLF are stored/transmitted as decimal fractions (CORE Section 9.6)
+        // but shown to the user as whole-number percentages -- display-layer conversion only.
+        function decimalToPercentDisplay(dec) {
+            if (dec === undefined || dec === null || dec === '') return '';
+            const num = parseFloat(dec);
+            if (isNaN(num)) return '';
+            return Math.round(num * 100 * 1e6) / 1e6;
+        }
+
+        function getPercentAsDecimal(el, fallbackDecimal) {
+            if (!el || el.value === '' || el.value === null) return fallbackDecimal;
+            const parsed = parseFloat(el.value);
+            if (isNaN(parsed)) return fallbackDecimal;
+            return Math.round((parsed / 100) * 1e8) / 1e8;
         }
 
         function markChanged(path) {
@@ -599,11 +554,20 @@
 
         async function loadProject() {
             document.getElementById('project-id-sub').innerText = `Project ID: ${projectId}`;
+            DISPLAY_LABELS = await displayLabelsPromise;
             try {
                 const res = await fetch(`/api/projects/${projectId}`);
                 projectRecord = await res.json();
                 originalExtracted = projectRecord.extracted_data || {};
                 const data = projectRecord.approved_data || originalExtracted;
+                // A prior approval can leave one of these three array fields null inside an
+                // otherwise-populated approved_data (e.g. a table failed to serialize on an
+                // earlier submit) while extracted_data still holds the real values. Fall back
+                // per-field to extracted_data rather than rendering that table as empty --
+                // otherwise a reviewer has no way to see or re-approve the correct data.
+                const offtakersForDisplay = (data.offtakers && data.offtakers.length) ? data.offtakers : (originalExtracted.offtakers || []);
+                const debtForDisplay = (data.debt_instruments && data.debt_instruments.length) ? data.debt_instruments : (originalExtracted.debt_instruments || []);
+                const dscrForDisplay = (data.dscr_schedule && data.dscr_schedule.length) ? data.dscr_schedule : (originalExtracted.dscr_schedule || []);
 
                 if (projectRecord.status === 'approved') {
                     const pill = document.getElementById('status-pill');
@@ -611,33 +575,75 @@
                     pill.innerText = 'Status: Approved';
                 }
 
+                // A stored value of undefined/null/"" is treated as absent and falls back to
+                // extracted_data -- an earlier partial/bad approval can leave approved_data present
+                // as an object but with individual scalar fields blanked (the same defect class as
+                // the array-field fallback above, just for scalars). Without this, a reviewer who
+                // never touches an already-blanked field re-submits the blank right back on every
+                // subsequent approval, silently overwriting the real extracted value each time.
+                const fieldVal = (obj, key) => {
+                    const v = obj ? obj[key] : undefined;
+                    return (v !== undefined && v !== null && v !== '') ? v : undefined;
+                };
+                const resolveVal = (key) => {
+                    const v = fieldVal(data, key);
+                    return v !== undefined ? v : fieldVal(originalExtracted, key);
+                };
+
                 // Populate scalar fields
-                ['project_name', 'technology_type', 'installed_capacity_mw_ac', 'calculation_date', 
-                 'contracted_revenue_share', 'sponsor_support_this_project', 'waterfall_trustee'].forEach(k => {
+                ['project_name', 'technology_type', 'installed_capacity_mw_ac', 'calculation_date',
+                 'sponsor_support_this_project', 'waterfall_trustee'].forEach(k => {
                     const el = document.getElementById(`field-${k}`);
-                    if (el && data[k] !== undefined && data[k] !== null) {
-                        el.value = data[k];
+                    const val = resolveVal(k);
+                    if (el && val !== undefined) {
+                        el.value = val;
                     }
                 });
 
-                // Populate P90
+                // Calculated Date: auto-populate with today's date if not already set (still editable).
+                const calcDateEl = document.getElementById('field-calculation_date');
+                if (calcDateEl && !calcDateEl.value) {
+                    calcDateEl.value = new Date().toISOString().slice(0, 10);
+                }
+
+                // Contracted Revenue Share is stored as a decimal fraction but shown as a percentage.
+                const revShareEl = document.getElementById('field-contracted_revenue_share');
+                const revShareVal = resolveVal('contracted_revenue_share');
+                if (revShareEl && revShareVal !== undefined) {
+                    revShareEl.value = decimalToPercentDisplay(revShareVal);
+                }
+
+                // Populate P90 -- same per-field fallback to extracted_data.p90_attestation.
                 const p90 = data.p90_attestation || {};
-                ['p90_plf', 'p90_attestation_basis', 'p90_resource_study', 'p90_preparer'].forEach(k => {
+                const p90Extracted = originalExtracted.p90_attestation || {};
+                const resolveP90 = (key) => {
+                    const v = fieldVal(p90, key);
+                    return v !== undefined ? v : fieldVal(p90Extracted, key);
+                };
+                ['p90_resource_study', 'p90_preparer'].forEach(k => {
                     const el = document.getElementById(`field-p90_attestation.${k}`);
-                    if (el && p90[k] !== undefined && p90[k] !== null) {
-                        el.value = p90[k];
+                    const val = resolveP90(k);
+                    if (el && val !== undefined) {
+                        el.value = val;
                     }
                 });
+                const plfEl = document.getElementById('field-p90_attestation.p90_plf');
+                const plfVal = resolveP90('p90_plf');
+                if (plfEl && plfVal !== undefined) {
+                    plfEl.value = decimalToPercentDisplay(plfVal);
+                }
+                const basisEl = document.getElementById('field-p90_attestation.p90_attestation_basis');
+                if (basisEl) basisEl.innerHTML = p90BasisOptionsHtml(resolveP90('p90_attestation_basis'));
 
                 // Populate Debt Instruments
                 const debtBody = document.getElementById('debt-tbody');
                 debtBody.innerHTML = '';
-                (data.debt_instruments || []).forEach((inst, idx) => {
+                debtForDisplay.forEach((inst, idx) => {
                     debtBody.innerHTML += `
                         <tr>
                             <td><input type="text" value="${inst.label || ''}" id="debt-label-${idx}" oninput="markChanged('debt[${idx}].label')"></td>
                             <td><input type="number" value="${inst.amount || 0}" id="debt-amount-${idx}" oninput="markChanged('debt[${idx}].amount')"></td>
-                            <td><input type="text" value="${inst.treatment || ''}" id="debt-treatment-${idx}" oninput="markChanged('debt[${idx}].treatment')"></td>
+                            <td><select id="debt-treatment-${idx}" onchange="markChanged('debt[${idx}].treatment')">${treatmentOptionsHtml(inst.treatment)}</select></td>
                         </tr>
                     `;
                 });
@@ -645,14 +651,20 @@
                 // Populate Offtakers
                 const offBody = document.getElementById('offtakers-tbody');
                 offBody.innerHTML = '';
-                (data.offtakers || []).forEach((off, idx) => {
+                offtakersForDisplay.forEach((off, idx) => {
                     offBody.innerHTML += `
                         <tr>
                             <td><input type="text" value="${off.name || ''}" id="off-name-${idx}" oninput="markChanged('off[${idx}].name')"></td>
-                            <td><input type="text" value="${off.type || ''}" id="off-type-${idx}" oninput="markChanged('off[${idx}].type')"></td>
-                            <td><input type="number" step="0.01" value="${off.contracted_share || 0}" id="off-share-${idx}" oninput="markChanged('off[${idx}].share')"></td>
-                            <td><input type="text" value="${off.rating_or_grade || ''}" id="off-grade-${idx}" oninput="markChanged('off[${idx}].grade')"></td>
+                            <td><select id="off-type-${idx}" onchange="markChanged('off[${idx}].type'); refreshOffGradeOptions(${idx})">${offtakerTypeOptionsHtml(off.type)}</select></td>
+                            <td>
+                                <div class="pct-field">
+                                    <input type="number" step="0.01" value="${decimalToPercentDisplay(off.contracted_share || 0)}" id="off-share-${idx}" oninput="markChanged('off[${idx}].share')">
+                                    <span class="pct-suffix">%</span>
+                                </div>
+                            </td>
+                            <td><select id="off-grade-${idx}" onchange="markChanged('off[${idx}].grade')">${ratingSymbolOptionsHtml(off.type, off.rating_or_grade)}</select></td>
                             <td><input type="text" value="${off.rating_agency || ''}" id="off-agency-${idx}" oninput="markChanged('off[${idx}].agency')"></td>
+                            <td><input type="date" value="${off.rating_date || ''}" id="off-date-${idx}" oninput="markChanged('off[${idx}].date')"></td>
                         </tr>
                     `;
                 });
@@ -660,10 +672,10 @@
                 // Populate DSCR
                 const dscrBody = document.getElementById('dscr-tbody');
                 dscrBody.innerHTML = '';
-                (data.dscr_schedule || []).forEach((item, idx) => {
+                dscrForDisplay.forEach((item, idx) => {
                     dscrBody.innerHTML += `
                         <tr>
-                            <td>${item.debt_year}</td>
+                            <td class="num">${item.debt_year}</td>
                             <td><input type="number" step="any" value="${item.cfads || 0}" id="dscr-cfads-${idx}" oninput="markChanged('dscr[${idx}].cfads')"></td>
                             <td><input type="number" step="any" value="${item.interest || 0}" id="dscr-interest-${idx}" oninput="markChanged('dscr[${idx}].interest')"></td>
                             <td><input type="number" step="any" value="${item.principal || 0}" id="dscr-principal-${idx}" oninput="markChanged('dscr[${idx}].principal')"></td>
@@ -676,26 +688,38 @@
             }
         }
 
+        function setScoringInProgress(inProgress) {
+            const btn = document.getElementById('score-rating-btn');
+            const spinner = document.getElementById('score-rating-spinner');
+            const label = document.getElementById('score-rating-label');
+            btn.disabled = inProgress;
+            spinner.style.display = inProgress ? 'inline-block' : 'none';
+            label.textContent = inProgress ? 'Scoring…' : 'Score & Rating';
+        }
+
         async function submitApproval() {
-            const btn = document.querySelector('.btn-primary');
-            if (btn) {
-                btn.disabled = true;
-                btn.innerText = 'Executing Grounded Assessment Pipeline...';
-            }
+            setScoringInProgress(true);
 
             const formData = { ...originalExtracted };
 
-            ['project_name', 'technology_type', 'installed_capacity_mw_ac', 'calculation_date', 
-             'contracted_revenue_share', 'sponsor_support_this_project', 'waterfall_trustee'].forEach(k => {
+            ['project_name', 'technology_type', 'installed_capacity_mw_ac', 'calculation_date',
+             'sponsor_support_this_project', 'waterfall_trustee'].forEach(k => {
                 const el = document.getElementById(`field-${k}`);
                 if (el) formData[k] = el.value;
             });
 
+            // Contracted Revenue Share: convert the displayed percentage back to a decimal fraction.
+            formData.contracted_revenue_share = getPercentAsDecimal(
+                document.getElementById('field-contracted_revenue_share'),
+                formData.contracted_revenue_share
+            );
+
             const p90 = formData.p90_attestation || {};
-            ['p90_plf', 'p90_attestation_basis', 'p90_resource_study', 'p90_preparer'].forEach(k => {
+            ['p90_attestation_basis', 'p90_resource_study', 'p90_preparer'].forEach(k => {
                 const el = document.getElementById(`field-p90_attestation.${k}`);
                 if (el) p90[k] = el.value;
             });
+            p90.p90_plf = getPercentAsDecimal(document.getElementById('field-p90_attestation.p90_plf'), p90.p90_plf);
             formData.p90_attestation = p90;
 
             // Safe field extractors preserving 0 and empty string ""
@@ -705,6 +729,11 @@
                 const parsed = parseFloat(el.value);
                 return !isNaN(parsed) ? parsed : fallback;
             };
+            // Blank treatment is an intentional null (blocked by V14), not the string "".
+            const getEnumVal = (el, fallback) => {
+                if (!el) return fallback;
+                return el.value === '' ? null : el.value;
+            };
 
             // Serialize Debt Instruments
             const origDebt = originalExtracted.debt_instruments || [];
@@ -712,7 +741,7 @@
                 ...inst,
                 label: getVal(document.getElementById(`debt-label-${idx}`), inst.label),
                 amount: getNum(document.getElementById(`debt-amount-${idx}`), inst.amount),
-                treatment: getVal(document.getElementById(`debt-treatment-${idx}`), inst.treatment)
+                treatment: getEnumVal(document.getElementById(`debt-treatment-${idx}`), inst.treatment)
             }));
 
             // Serialize Offtakers
@@ -721,9 +750,10 @@
                 ...off,
                 name: getVal(document.getElementById(`off-name-${idx}`), off.name),
                 type: getVal(document.getElementById(`off-type-${idx}`), off.type),
-                contracted_share: getNum(document.getElementById(`off-share-${idx}`), off.contracted_share),
-                rating_or_grade: getVal(document.getElementById(`off-grade-${idx}`), off.rating_or_grade),
-                rating_agency: getVal(document.getElementById(`off-agency-${idx}`), off.rating_agency)
+                contracted_share: getPercentAsDecimal(document.getElementById(`off-share-${idx}`), off.contracted_share),
+                rating_or_grade: getEnumVal(document.getElementById(`off-grade-${idx}`), off.rating_or_grade),
+                rating_agency: getVal(document.getElementById(`off-agency-${idx}`), off.rating_agency),
+                rating_date: getVal(document.getElementById(`off-date-${idx}`), off.rating_date)
             }));
 
             // Serialize DSCR Schedule
@@ -747,11 +777,11 @@
                     window.location.href = appRes.redirect_url || `/results/${projectId}`;
                 } else {
                     alert('Approval failed: ' + (appRes.detail || JSON.stringify(appRes)));
-                    if (btn) { btn.disabled = false; btn.innerText = 'Approve & Run Full Rating Assessment'; }
+                    setScoringInProgress(false);
                 }
             } catch (err) {
                 alert('Error submitting approval: ' + err.message);
-                if (btn) { btn.disabled = false; btn.innerText = 'Approve & Run Full Rating Assessment'; }
+                setScoringInProgress(false);
             }
         }
 
@@ -760,7 +790,21 @@
             window.location.reload();
         }
 
-        window.onload = loadProject;
+        function showEmptyState() {
+            document.getElementById('empty-state').style.display = 'block';
+            document.getElementById('review-content').style.display = 'none';
+            document.getElementById('bottom-bar').style.display = 'none';
+            document.getElementById('project-id-sub').innerText = 'No project loaded';
+        }
+
+        window.onload = function() {
+            if (redirecting) return; // navigating to the active project's own URL; nothing to render here
+            if (!projectId) {
+                showEmptyState();
+                return;
+            }
+            loadProject();
+        };
     </script>
 </body>
 </html>

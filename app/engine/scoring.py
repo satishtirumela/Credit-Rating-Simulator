@@ -26,7 +26,15 @@ def _round_half_up(val: float, decimals: int) -> float:
     return math.floor(val * factor + 0.5 + 1e-9) / factor
 
 
-def _get_offtaker_tier(off_type: Optional[str], rating: Optional[str]) -> str:
+def _get_offtaker_tier(off_type: Optional[str], rating: Optional[str]) -> Optional[str]:
+    """
+    Maps an offtaker's (type, rating) to a CORE Appendix A counterparty tier via exact-match
+    lookup against the 20-symbol enum table (CORE Section 7.1). Returns None -- never a tier --
+    when the rating does not exactly match a known code (e.g. a typo, whitespace variant, blank,
+    or a compound string). A None return is a NULL, not a "worst tier" determination; callers
+    must route it through the null-handling pipeline (CORE Section 10.1.1), never into the
+    notching/cap tables as if it were a resolved Poor/Unrated rating.
+    """
     r = (rating or "").strip().upper()
     ot = (off_type or "").strip().upper()
 
@@ -54,7 +62,7 @@ def _get_offtaker_tier(off_type: Optional[str], rating: Optional[str]) -> str:
         elif r in ["C+", "C", "C-", "D"]:
             return "CP_POOR_UNRATED"
 
-    return "CP_POOR_UNRATED"
+    return None
 
 
 def _tier_to_val(tier: str) -> float:
@@ -273,6 +281,13 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
                     if not off.get("type"):
                         missing_criticals.append(f"offtakers[{idx}].type")
                     if not off.get("rating_or_grade"):
+                        missing_criticals.append(f"offtakers[{idx}].rating_or_grade")
+                    elif _get_offtaker_tier(off.get("type"), off.get("rating_or_grade")) is None:
+                        # Present but unresolvable against the CORE Appendix A rating scale (e.g. a
+                        # malformed value or a compound string like "AA, CRISIL, 12-03-2026" typed into
+                        # the free-text Rating/Grade field). Treated identically to a missing critical
+                        # field -- the engine must never silently substitute the worst tier for an
+                        # unresolvable one.
                         missing_criticals.append(f"offtakers[{idx}].rating_or_grade")
 
     if missing_criticals:
@@ -972,6 +987,9 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
     offtaker_tier = "CP_STRONG"
 
     # Factor 1: Offtaker credit quality (§7.1)
+    # Individual dominant offtakers (share >= 0.2500) with an unresolvable rating are already
+    # caught at Stage 1 above and short-circuit to "Insufficient Input -- Not Rated" before this
+    # code ever runs, so _get_offtaker_tier(...) is guaranteed non-None for them here.
     dominant_tiers = []
     if offtakers and isinstance(offtakers, list):
         for off in offtakers:
@@ -979,12 +997,21 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
                 sh = off.get("contracted_share", 0.0) or 0.0
                 if sh >= 0.2500:
                     t = _get_offtaker_tier(off.get("type"), off.get("rating_or_grade"))
-                    dominant_tiers.append(t)
+                    if t is not None:
+                        dominant_tiers.append(t)
 
     oth_sh = p.get("other_offtakers_share", 0.0) or 0.0
     oth_tier = p.get("other_offtakers_worst_tier")
     if oth_sh >= 0.2500 and oth_tier:
-        dominant_tiers.append(_get_offtaker_tier(None, oth_tier))
+        t = _get_offtaker_tier(None, oth_tier)
+        if t is not None:
+            dominant_tiers.append(t)
+        else:
+            null_register.append({
+                "field": "other_offtakers_worst_tier",
+                "sub_factor": "Block A — Offtaker Rating & Credit Quality",
+                "points_forgone": "Unresolved rating (excluded from Section 7.1 determination)"
+            })
 
     if dominant_tiers:
         worst_t = "CP_STRONG"
@@ -996,17 +1023,34 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
         weighted_sum = 0.0
         total_sh = 0.0
         if offtakers and isinstance(offtakers, list):
-            for off in offtakers:
+            for idx, off in enumerate(offtakers):
                 if isinstance(off, dict):
                     sh = off.get("contracted_share", 0.0) or 0.0
                     if sh > 0:
                         t = _get_offtaker_tier(off.get("type"), off.get("rating_or_grade"))
+                        if t is None:
+                            # Present but unresolvable, and not critical at this share level --
+                            # excluded from the blend rather than silently corrupting the weighted
+                            # average with a Poor/Unrated value. Flagged for correction, not scored.
+                            null_register.append({
+                                "field": f"offtakers[{idx}].rating_or_grade",
+                                "sub_factor": "Block A — Offtaker Rating & Credit Quality",
+                                "points_forgone": "Unresolved rating (excluded from Section 7.1 blend)"
+                            })
+                            continue
                         weighted_sum += _tier_to_val(t) * sh
                         total_sh += sh
         if oth_sh > 0 and oth_tier:
             t = _get_offtaker_tier(None, oth_tier)
-            weighted_sum += _tier_to_val(t) * oth_sh
-            total_sh += oth_sh
+            if t is not None:
+                weighted_sum += _tier_to_val(t) * oth_sh
+                total_sh += oth_sh
+            else:
+                null_register.append({
+                    "field": "other_offtakers_worst_tier",
+                    "sub_factor": "Block A — Offtaker Rating & Credit Quality",
+                    "points_forgone": "Unresolved rating (excluded from Section 7.1 blend)"
+                })
 
         if total_sh > 0:
             avg_v = weighted_sum / total_sh
@@ -1158,14 +1202,17 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
     waterfall_trustee_val = p.get("waterfall_trustee", "YES")
 
     # Block A: Business & Asset Risk (35.0 pts)
-    pct_a = (block_a_score / 35.0) * 100.0
-    if pct_a >= 70.0:
+    # BUG 7 FIX: driver-vs-constraint for this bullet must be decided by the metric it actually
+    # names (contracted revenue share), not by Block A's aggregate percentage -- Block A also
+    # folds in permitting/regulatory/technology-maturity signals that have nothing to do with
+    # revenue contractedness, so a weak Block A could previously mislabel a genuinely high
+    # contracted share (e.g. 97%) as a downward "uncontracted merchant exposure" constraint.
+    if contracted_share_proj >= 0.70:
         drivers.append(f"High contracted revenue share of {rev_pct:.1f}% (merchant exposure {merchant_pct:.1f}%)")
     else:
         constraints.append(f"Uncontracted merchant revenue exposure of {merchant_pct:.1f}% (contracted share {rev_pct:.1f}%)")
 
     # Block B: Cash-Flow Adequacy & Coverage (35.0 pts)
-    pct_b = (block_b_score / 35.0) * 100.0
     m_dscr = min_dscr_val if min_dscr_val is not None else 1.34
     a_dscr = avg_dscr_val if avg_dscr_val is not None else 1.52
     set_label = "Set W" if tech_type == "TECH_WIND" else ("Set H" if tech_type == "TECH_HYBRID" else "Set S")
@@ -1183,7 +1230,13 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
         # Below Adequate or null — cite the Adequate threshold as the target
         set_floor_val = min_th[2] if len(min_th) > 2 else 1.15
 
-    if pct_b >= 70.0:
+    # BUG 7 FIX (same class as Block A above): whether this bullet reads as a driver or a
+    # constraint must be decided by minimum DSCR's own tier (already computed above to pick
+    # set_floor_val), not by Block B's aggregate percentage -- Block B also folds in PLCR/LLCR/
+    # CFO-coverage/CFADS-reconciliation signals, so a weak Block B could previously mislabel a
+    # minimum DSCR that's comfortably at or above its own Adequate floor as "falling below
+    # target threshold", which is the literal inverse of what the number shows.
+    if m_dscr is not None and m_dscr >= min_th[2]:
         drivers.append(f"Minimum DSCR of {m_dscr:.2f}x (average {a_dscr:.2f}x) comfortably exceeds {set_label} {set_floor_val:.2f}x threshold")
     else:
         constraints.append(f"Minimum DSCR of {m_dscr:.2f}x (average {a_dscr:.2f}x) falls below {set_label} {set_floor_val:.2f}x target threshold")
