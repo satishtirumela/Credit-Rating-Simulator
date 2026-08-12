@@ -3,7 +3,11 @@ End-to-End Approved Assessment Pipeline Orchestrator.
 Chains: Score -> Ground -> Draft -> QA -> Report & Persist upon Human Approval.
 Strict Engine/Model Boundary:
 - Python engine (score_project) handles 100% of numeric scores, bands, caps, and confidence.
-- Gemini handles ONLY qualitative rationale narrative drafting grounded in verified citations.
+- Rationale narrative drafting (draft_rationale) is deterministic Python string templating over
+  the score_project() result dict -- not a Gemini/LLM call. Its citations come from
+  get_grounded_methodology_citations(), a static, technology-branched lookup table, not an LLM
+  call or a retrieval index. Gemini is used elsewhere in this codebase (app/extraction.py) only
+  for document extraction (Template 1/2 -> project JSON), unrelated to rationale drafting.
 """
 
 from typing import Dict, Any
@@ -48,7 +52,8 @@ def run_approved_assessment_pipeline(project_id: str, approved_data: Dict[str, A
     Executes Phase 2 of the credit rating pipeline upon explicit human approval:
     1. Score (includes all 5 validation stages in Python engine).
     2. Ground (verifies verbatim methodology quotes via manifest SHA-256).
-    3. Draft (generates grounded qualitative rationale via Gemini).
+    3. Draft (deterministic narrative generation from the score_project() result dict, with
+       citations from a static, technology-branched lookup -- no Gemini/LLM call).
     4. QA (executes automated QA review pass).
     5. Report & Save (generates ReportLab PDF & saves to Cloud Firestore).
     """

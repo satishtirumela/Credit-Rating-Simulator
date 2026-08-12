@@ -128,6 +128,8 @@ def draft_rationale(
         },
         "rationale_text": str,
         "citations": [{"claim": str, "source_document": str, "source_section": str}],
+        "uncited_claims": [str],
+        "sector_context_sources": [{"block": str, "document": str, "tier": str}],
         "mandatory_disclaimer": str
       }
     """
@@ -150,14 +152,26 @@ def draft_rationale(
             "rationale_text": "Not rated — no rationale produced.",
             "citations": [],
             "uncited_claims": [],
+            "sector_context_sources": [],
             "mandatory_disclaimer": MANDATORY_DISCLAIMER
         }
 
     # Extract score details
+    uncited: List[str] = []
+
     p_name = project.get("project_name", "Project SPV")
     tech_type = project.get("technology_type", "TECH_WIND")
-    cap_mw = project.get("installed_capacity_mw_ac", 150)
-    rev_share = float(project.get("contracted_revenue_share") or 0.88) * 100
+
+    cap_mw = project.get("installed_capacity_mw_ac")
+    if cap_mw is None:
+        uncited.append("installed_capacity_mw_ac not available from project inputs — plant capacity omitted from narrative")
+
+    rev_share_frac = project.get("contracted_revenue_share")
+    if rev_share_frac is not None:
+        rev_share = float(rev_share_frac) * 100
+    else:
+        rev_share = None
+        uncited.append("contracted_revenue_share not available from project inputs — contracted revenue share omitted from narrative")
 
     final_band = result.get("final_band", "Not Rated")
     ind_band = result.get("indicative_band", "Not Rated")
@@ -174,23 +188,32 @@ def draft_rationale(
     min_dscr = result.get("minimum_dscr") if result.get("minimum_dscr") is not None else project.get("minimum_dscr")
     avg_dscr = result.get("average_dscr") if result.get("average_dscr") is not None else project.get("average_dscr")
     if min_dscr is None:
+        # CONFIRMED UNREACHABLE on any scored (non-"Not Rated") result -- minimum_dscr is a
+        # Stage-1 critical field in scoring.py, so a null value here would already have
+        # short-circuited to the unrated-exit path above. Left exactly as-is per instruction.
         min_dscr = 1.34
     if avg_dscr is None:
-        avg_dscr = 1.52
+        uncited.append("average_dscr not available from scoring engine — average DSCR omitted from narrative")
     plcr_val = result.get("plcr")
     llcr_val = result.get("llcr")
     gearing_val = result.get("gearing")
-    # BUG 4 FIX: use is-not-None guard, not falsy check, so a genuine 0.0 is not replaced by 6.0
-    dsra_months_val = result.get("dsra_months") if result.get("dsra_months") is not None else 6.0
+    dsra_months_val = result.get("dsra_months")
+    if dsra_months_val is None:
+        uncited.append("dsra_months not available from scoring engine — DSRA liquidity buffer omitted from narrative")
     liquidity_months_val = result.get("liquidity_months") if result.get("liquidity_months") is not None else dsra_months_val
 
     # Executive Summary
+    capacity_clause = f" ({cap_mw} MW {tech_type.replace('TECH_', '')})" if cap_mw is not None else ""
+    rev_share_clause = f"a high contracted revenue share of {rev_share:.1f}%, " if rev_share is not None else ""
+    avg_dscr_summary_clause = f" and average DSCR of {avg_dscr:.2f}x" if avg_dscr is not None else ""
+    dsra_summary_clause = f", supported by a {dsra_months_val:.1f}-month DSRA liquidity buffer" if dsra_months_val is not None else ""
+
     exec_summary = (
-        f"The credit rating assessment for {p_name} ({cap_mw} MW {tech_type.replace('TECH_', '')}) "
+        f"The credit rating assessment for {p_name}{capacity_clause} "
         f"assigns an indicative rating band of '{final_band}' based on a total post-notching score of {post_score:.1f} / 115.0 points "
-        f"(raw score of {raw_score:.1f} points). The evaluation reflects a high contracted revenue share of {rev_share:.1f}%, "
-        f"a solid minimum DSCR of {min_dscr:.2f}x and average DSCR of {avg_dscr:.2f}x under P90 resource estimates, "
-        f"supported by a {dsra_months_val:.1f}-month DSRA liquidity buffer. The assessment carries {confidence} confidence ({conf_reason})."
+        f"(raw score of {raw_score:.1f} points). The evaluation reflects {rev_share_clause}"
+        f"a solid minimum DSCR of {min_dscr:.2f}x{avg_dscr_summary_clause} under P90 resource estimates{dsra_summary_clause}. "
+        f"The assessment carries {confidence} confidence ({conf_reason})."
     )
 
     # Block A Narrative (Business & Asset Risk + CRISIL Tier 2 Sector Context)
@@ -199,6 +222,8 @@ def draft_rationale(
     # type, so a solar or hybrid project's Block A narrative read as if it were a wind asset.
     # Branch the resource-risk sentence by technology, matching the same branching already
     # used for methodology citations in get_grounded_methodology_citations().
+    sector_context_sources: List[Dict[str, str]] = []
+
     if tech_type == "TECH_WIND":
         resource_risk_sentence = (
             "As highlighted in the CRISIL Intelligence Indian Renewable Energy Report (January 2026), "
@@ -207,6 +232,11 @@ def draft_rationale(
             "concrete foundation capex, alongside Balance of Plant (BOP) complexity (20-30% of total "
             "project cost), represent key physical and execution risk factors."
         )
+        sector_context_sources.append({
+            "block": "block_a_narrative",
+            "document": "Crisil_Intelligence_Indian_Renewable_Energy_Report_January_2026.pdf",
+            "tier": "Tier 2"
+        })
     elif tech_type == "TECH_SOLAR":
         resource_risk_sentence = (
             "Solar resource risk is governed by module degradation, soiling losses, and irradiance "
@@ -236,11 +266,12 @@ def draft_rationale(
     plcr_str = f" Project Life Coverage Ratio (PLCR) stands at {plcr_val:.2f}x" if plcr_val is not None else ""
     llcr_str = f" and Loan Life Coverage Ratio (LLCR) at {llcr_val:.2f}x" if llcr_val is not None else ""
     coverage_tail = f"{plcr_str}{llcr_str}, providing substantial cash flow headroom above debt service obligations." if (plcr_str or llcr_str) else "."
+    avg_dscr_clause_b = f" and an average DSCR of {avg_dscr:.2f}x" if avg_dscr is not None else ""
 
     block_b_narrative = (
         f"Cash-Flow Adequacy (Block B) scored {block_b:.1f} / 35.0 points ({(block_b/35.0*100):.1f}%). Under P90 generation assumptions, "
-        f"the project demonstrates robust debt service coverage metrics with a minimum DSCR of {min_dscr:.2f}x and an average DSCR "
-        f"of {avg_dscr:.2f}x across the debt tenor.{coverage_tail}"
+        f"the project demonstrates robust debt service coverage metrics with a minimum DSCR of {min_dscr:.2f}x{avg_dscr_clause_b} "
+        f"across the debt tenor.{coverage_tail}"
     )
 
     # Block C Narrative (Financial Strength & Liquidity)
@@ -258,10 +289,14 @@ def draft_rationale(
     # months), and a static "1.20x" lockup threshold regardless of the project's actual
     # lockup_dscr_threshold field (or whether a distribution lock-up exists at all). Both are now
     # bound to the project's real inputs.
-    dsra_tier_label = "fully funded" if dsra_months_val >= 9.0 else (
-        "moderately funded" if dsra_months_val >= 6.0 else (
-        "thinly funded" if dsra_months_val >= 3.0 else "under-funded"
-    ))
+    if dsra_months_val is not None:
+        dsra_tier_label = "fully funded" if dsra_months_val >= 9.0 else (
+            "moderately funded" if dsra_months_val >= 6.0 else (
+            "thinly funded" if dsra_months_val >= 3.0 else "under-funded"
+        ))
+        dsra_clause_d = f"a {dsra_tier_label} {dsra_months_val:.1f}-month Debt Service Reserve Account (DSRA), "
+    else:
+        dsra_clause_d = ""
     lockup_val = project.get("lockup_dscr_threshold")
     has_lockup = project.get("distribution_lockup") == "YES" and lockup_val is not None
     lockup_clause = (
@@ -270,7 +305,7 @@ def draft_rationale(
     )
     block_d_narrative = (
         f"Structural & Covenant Protections (Block D) scored {block_d:.1f} / 20.0 points ({(block_d/20.0*100):.1f}%). Key credit enhancements include "
-        f"a {dsra_tier_label} {dsra_months_val:.1f}-month Debt Service Reserve Account (DSRA), a Ring-Fenced Trust and Retention Account (TRA) cash waterfall"
+        f"{dsra_clause_d}a Ring-Fenced Trust and Retention Account (TRA) cash waterfall"
         f"{lockup_clause}, and the covenant package and negative pledge protections captured at Template 1 Block D."
     )
 
@@ -363,6 +398,7 @@ def draft_rationale(
         },
         "rationale_text": rationale_text,
         "citations": citations,
-        "uncited_claims": [],
+        "uncited_claims": uncited,
+        "sector_context_sources": sector_context_sources,
         "mandatory_disclaimer": MANDATORY_DISCLAIMER
     }
