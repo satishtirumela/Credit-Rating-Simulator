@@ -1170,17 +1170,34 @@ def score_project(project: Dict[str, Any]) -> Dict[str, Any]:
     has_binding_cap = any(trig["binding"] for trig in cap_triggers)
     null_count = len(null_register)
 
-    confidence = "High"
-    reason_parts = []
+    # Each condition below is evaluated independently against CORE §9.8.3's table;
+    # per that section, "where more than one row's conditions are met, the lowest
+    # applicable confidence governs" -- so every triggered condition is collected
+    # first, and the worst (lowest) level among them wins, rather than mutating a
+    # single running value in a fixed order (which previously let a later "Moderate"
+    # branch silently overwrite an earlier, and correct, "Low").
+    CONFIDENCE_RANK = {"High": 3, "Moderate": 2, "Low": 1}
+    triggered: List[Tuple[str, str]] = []
+
     if d < 3.0:
-        confidence = "Moderate"
-        reason_parts.append(f"d = {d:.1f} — within 3.0 points of the {edge_labels.get(nearest_edge, '')}")
-    if null_count > 0:
-        confidence = "Moderate" if confidence == "High" else ("Low" if null_count >= 4 else "Moderate")
-        reason_parts.append(f"{null_count} non-critical nulls")
+        triggered.append(("Moderate", f"d = {d:.1f} — within 3.0 points of the {edge_labels.get(nearest_edge, '')}"))
+    if null_count >= 4:
+        triggered.append(("Low", f"{null_count} non-critical nulls"))
+    elif null_count >= 1:
+        triggered.append(("Moderate", f"{null_count} non-critical nulls"))
+    if stale_almm in (True, "YES"):
+        triggered.append(("Low", "ALMM parameter more than 90 days past its as-at date"))
+    if stale_offtaker in (True, "YES") or stale_disc in (True, "YES"):
+        triggered.append(("Moderate", "stale input flagged"))
     if has_binding_cap:
-        confidence = "Moderate"
-        reason_parts.append("Binding cap present")
+        triggered.append(("Moderate", "Binding cap present"))
+
+    if triggered:
+        confidence = min((level for level, _ in triggered), key=lambda lvl: CONFIDENCE_RANK[lvl])
+        reason_parts = [reason for _, reason in triggered]
+    else:
+        confidence = "High"
+        reason_parts = []
 
     if reason_parts:
         if reason_parts[0].startswith("d = "):

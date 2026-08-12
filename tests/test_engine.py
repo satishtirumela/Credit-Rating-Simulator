@@ -187,6 +187,50 @@ def test_rule_v12_positive_trigger_stale_rating():
     v12_results = [r for r in computed["validation_results"] if r["rule"] == "V12"]
     assert len(v12_results) == 1, "Expected V12 result"
     assert v12_results[0]["outcome"] == "Warn", f"Expected V12 Warn, got {v12_results[0]['outcome']}"
+    # CORE §9.8.3: a stale offtaker rating must independently force confidence to at
+    # least Moderate, even though this project (TP-1 base, offtaker tier unchanged at
+    # CP_STRONG) has zero non-critical nulls, d = 7.0, and no cap.
+    assert computed["confidence"] == "Moderate", f"Expected confidence 'Moderate' for a stale offtaker rating, got '{computed['confidence']}'"
+
+
+def test_confidence_four_or_more_nulls_with_d_above_3_is_low():
+    """
+    CORE §9.8.3: "Four or more non-critical nulls" forces confidence to Low
+    unconditionally -- it is not gated on d < 3.0. This project (TP-1 base with 4
+    non-critical fields removed) has null_count == 4, d == 3.0 exactly (so the
+    separate d < 3.0 Moderate trigger does NOT also fire), and no cap, isolating the
+    null-count rule as the sole trigger.
+    """
+    project = PROJECTS[0]  # TP-1
+    inputs = dict(project["inputs"])
+    for field in ["competitive_position", "operator_mw_under_om",
+                  "npv_cfads_project_life", "npv_cfads_loan_life"]:
+        inputs.pop(field, None)
+
+    computed = score_project(inputs)
+
+    assert len(computed["null_register"]) == 4, f"Expected 4 non-critical nulls, got {len(computed['null_register'])}"
+    assert computed["distance_to_band_edge"] == 3.0, f"Expected d == 3.0 (not < 3.0), got {computed['distance_to_band_edge']}"
+    assert computed["cap_triggers"] == [], f"Expected no cap triggers, got {computed['cap_triggers']}"
+    assert computed["confidence"] == "Low", f"Expected confidence 'Low' for >=4 non-critical nulls, got '{computed['confidence']}'"
+
+
+def test_confidence_stale_almm_forces_low():
+    """
+    CORE §9.8.3: an ALMM parameter more than 90 days past its as-at date forces
+    confidence to Low. This project (TP-1 base) is otherwise High-eligible: zero
+    non-critical nulls, d == 7.0, no cap.
+    """
+    project = PROJECTS[0]  # TP-1
+    inputs = dict(project["inputs"])
+    inputs["stale_almm_parameter"] = "YES"
+
+    computed = score_project(inputs)
+
+    assert len(computed["null_register"]) == 0, f"Expected 0 non-critical nulls, got {len(computed['null_register'])}"
+    assert computed["distance_to_band_edge"] == 7.0, f"Expected d == 7.0, got {computed['distance_to_band_edge']}"
+    assert computed["cap_triggers"] == [], f"Expected no cap triggers, got {computed['cap_triggers']}"
+    assert computed["confidence"] == "Low", f"Expected confidence 'Low' for a stale ALMM parameter, got '{computed['confidence']}'"
 
 
 def test_rule_v6_positive_trigger_nca_disagreement():
