@@ -66,9 +66,9 @@ def get_grounded_methodology_citations(technology_type: Optional[str]) -> List[D
 
     # 1. Tier 1: CARE Infrastructure Criteria — DSCR & Debt Protection
     passages.append({
-        "claim": "In debt protection metrics, one of the key ratios to determine repayment capacity, DSCR is evaluated along with debt service protection metrics, reserve accounts such as debt service reserve account (DSRA), and financial flexibility.",
+        "claim": "Structural features, such as major maintenance reserve, invertor reserve and other liquidity support mechanisms, such as debt service reserve account (DSRA), among others, provide liquidity support.",
         "source_document": "CARE_Criteria_for_Infrastructure_Sector_Ratings_Mar_2025.pdf",
-        "source_section": "Section 4 — Cash Flow Adequacy & DSCR (Page 3)"
+        "source_section": "Page 3, Section V — Debt maturity and structural features"
     })
 
     # 2. Tier 1: CRISIL Infrastructure Criteria — Standalone Credit Profile & DSRA
@@ -81,21 +81,21 @@ def get_grounded_methodology_citations(technology_type: Optional[str]) -> List[D
     # 3. Technology-Specific Tier 1 Methodology
     if technology_type == "TECH_WIND":
         passages.append({
-            "claim": "CARE Ratings assesses the tariff competitiveness of the wind energy tariff in PPA by comparing it with the average power purchase cost and the marginal variable cost of power purchased by the off-taker utility. The agency conducting the resource assessment study typically provides power generation estimates for the given site at three probability of confidence levels, P-50, P-75, and P-90, whereby the P-90 level is considered to be the most conservative estimate.",
+            "claim": "The agency conducting the resource assessment study typically provides power generation estimates for the given site at three probability of confidence levels, P -50, P-75, and P-90, whereby the P-90 level is considered to be the most conservative estimate.",
             "source_document": "CARE_Ratings_Methodology_Wind_Power_Projects_December_2024.pdf",
-            "source_section": "Section 3 — Resource Assessment & Tariff Competitiveness (Page 3)"
+            "source_section": "Page 3, Operating and climatic risks"
         })
     elif technology_type == "TECH_SOLAR":
         passages.append({
-            "claim": "Solar power projects are evaluated on resource study quality, PPA contracted tenor, and module degradation performance.",
+            "claim": "The agency conducting the resource assessment study typically provides power generation estimates for the given site at three probability of confidence levels, P -50, P-75, and P -90, whereby, the P -90 level is considered to be the most conservative estimate, which is then adjusted for annual degradation.",
             "source_document": "CARE_Methodology_Solar_Power_Projects_December_2024.pdf",
-            "source_section": "Section 3 — Operating Risk & Solar Resource"
+            "source_section": "Page 3, Operating and climatic risks"
         })
     elif technology_type == "TECH_HYBRID":
         passages.append({
-            "claim": "Hybrid wind-solar projects benefit from generation complementarity and combined tariff stability.",
+            "claim": "Given the growing share of renewables in the generation mix and intermittency associated with these projects, the Government is promoting hybrid (solar plus wind) projects to compliment energy storage capacity (battery or pumped hydro) for round-the-clock (RTC) or peak-time power supply.",
             "source_document": "ICRA_Power_Solar_and_Wind_Rating_Methodology_July_2025.pdf",
-            "source_section": "Section 3 — Hybrid Projects"
+            "source_section": "Page 2, Overview"
         })
 
     # 4. Tier 2: CRISIL Intelligence Indian Renewable Energy Report (January 2026) — Sector Context
@@ -245,10 +245,10 @@ def draft_rationale(
         )
     elif tech_type == "TECH_HYBRID":
         resource_risk_sentence = (
-            "As a hybrid solar-wind (and, where applicable, storage-coupled) asset, generation "
-            "complementarity across resource types provides some diversification benefit, offset by "
-            "the additional dispatch-controller and shared-infrastructure complexity typical of "
-            "hybrid configurations."
+            "As a hybrid solar-wind asset, the project reflects the broader industry trend of pairing "
+            "such projects with energy storage capacity (battery or pumped hydro) to meet round-the-clock "
+            "(RTC) or peak-time power supply needs, driven by the growing share of renewables in the "
+            "generation mix and the intermittency this entails."
         )
     else:
         resource_risk_sentence = (
