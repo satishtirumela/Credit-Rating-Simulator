@@ -692,7 +692,7 @@
 
             const formData = { ...originalExtracted };
 
-            ['project_name', 'technology_type', 'installed_capacity_mw_ac', 'calculation_date',
+            ['project_name', 'technology_type', 'calculation_date',
              'sponsor_support_this_project', 'waterfall_trustee'].forEach(k => {
                 const el = document.getElementById(`field-${k}`);
                 if (el) formData[k] = el.value;
@@ -724,6 +724,18 @@
                 if (!el) return fallback;
                 return el.value === '' ? null : el.value;
             };
+
+            // installed_capacity_mw_ac: schema-typed number, but el.value is always a string --
+            // parse it explicitly rather than assigning the raw string (BUG FIX: the generic
+            // scalar-field loop above assigns el.value uniformly, which is correct for the
+            // string/enum fields it handles but was silently sending this field as a string).
+            // getNum falls back to the original extracted value on a missing element or a
+            // blank/non-numeric input, matching the same fallback convention already used for
+            // debt_instruments[].amount and dscr_schedule[] below -- never sends NaN.
+            formData.installed_capacity_mw_ac = getNum(
+                document.getElementById('field-installed_capacity_mw_ac'),
+                originalExtracted.installed_capacity_mw_ac
+            );
 
             // Serialize Debt Instruments
             const origDebt = originalExtracted.debt_instruments || [];
