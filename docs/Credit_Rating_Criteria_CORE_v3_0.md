@@ -1429,9 +1429,9 @@ Downstream references to Section 9 must be updated. The engine, both templates, 
 | `reinvestment_ratio` | number | frac | | T1 §A.6 | §3.4 |
 | `reinvestment_funding_source` | `FUND_SRC_5` | — | | T1 §A.6 | §3.4 |
 | `operating_years_completed` | number | years (2 dp) | | T1 §A.7 | §3.5 |
-| `actual_gen_vs_p90_y1` | number | frac | | T1 §A.7 | §3.5 row 1 |
-| `actual_gen_vs_p90_y2` | number | frac | | T1 §A.7 | §3.5 row 1 |
-| `actual_gen_vs_p90_y3` | number | frac | | T1 §A.7 | §3.5 row 1 |
+| `actual_gen_vs_p90_y1` | number | frac | | T1 §A.7 | §3.5 row 1 (legitimately null for projects with fewer than 3 years of operating history) |
+| `actual_gen_vs_p90_y2` | number | frac | | T1 §A.7 | §3.5 row 1 (legitimately null for projects with fewer than 3 years of operating history) |
+| `actual_gen_vs_p90_y3` | number | frac | | T1 §A.7 | §3.5 row 1 (legitimately null for projects with fewer than 3 years of operating history) |
 | `actual_gen_vs_p90_period` | number | frac | | T1 §A.7 | §3.5 rows 2, 3, 4 |
 | `independent_resource_assessment` | `YN_2` | — | | T1 §A.7 | §3.5 |
 | `p90_verified_by_lta` | `YN_2` | — | | T1 §A.7 | §3.5 |
@@ -1451,8 +1451,8 @@ Downstream references to Section 9 must be updated. The engine, both templates, 
 | `p90_resource_study` | string | — | **Yes** | T2 §B3 | §9.5 |
 | `p90_preparer` | string | — | **Yes** | T2 §B3 | §9.5 |
 | `dscr_schedule[]` | array | — | **Yes**¹ | T2 §B1 | §4.1, §4.2, §9.2.1 |
-| `minimum_dscr` | number | x | **Yes**¹ | T2 §B2 | §4.1, §8.3 coverage floor, V1, V8, V8a |
-| `average_dscr` | number | x | | T2 §B2 | §4.2, V1 |
+| `minimum_dscr` | number | x | **Yes**¹ | T2 §B2 | §4.1, §8.3 coverage floor, V1, V8, V8a (legitimately null when dscr_schedule is supplied instead — CORE Section 9.8.1 permits this as an alternative) |
+| `average_dscr` | number | x | | T2 §B2 | §4.2, V1 (legitimately null when dscr_schedule is supplied instead — CORE Section 9.8.1 permits this as an alternative) |
 | `dscr_schedule[].debt_year` | integer | — | | T2 §B1 | ordering |
 | `dscr_schedule[].cfads` | number | currency | | T2 §B1 | §9.1 |
 | `dscr_schedule[].interest` | number | currency | | T2 §B1 | DSCR denominator |
@@ -1504,7 +1504,7 @@ Downstream references to Section 9 must be updated. The engine, both templates, 
 | `security_charge_accounts` | `YN_2` | T1 §D.1 | §6.1 element 2 |
 | `security_pledge_shares` | `YN_2` | T1 §D.1 | §6.1 element 2 |
 | `distribution_lockup` | `YN_2` | T1 §D.1 | §6.1 element 3 |
-| `lockup_dscr_threshold` | number (x) | T1 §D.1 | audit |
+| `lockup_dscr_threshold` | number (x) | T1 §D.1 | audit (legitimately null unless distribution_lockup == "YES") |
 | `cov_additional_indebtedness` | `YN_2` | T1 §D.2 | §6.2 |
 | `cov_asset_sales` | `YN_2` | T1 §D.2 | §6.2 |
 | `cov_change_of_control` | `YN_2` | T1 §D.2 | §6.2 |
@@ -1528,7 +1528,7 @@ Downstream references to Section 9 must be updated. The engine, both templates, 
 | `offtakers[].more_recent_published` | `YN_2` | — | | T1 | §9.9, V12 |
 | `other_offtakers_count` | integer | count | | T1 §N.6 | §7.1 Step 3 |
 | `other_offtakers_share` | number | frac | | T1 §N.6 | §7.1 Step 3, V3 |
-| `other_offtakers_worst_tier` | `COUNTERPARTY_4` | — | | T1 §N.6 | §7.1 Step 3 |
+| `other_offtakers_worst_tier` | `COUNTERPARTY_4` | — | | T1 §N.6 | §7.1 Step 3 (legitimately null when not applicable) |
 | `bullet_share` | number | frac | | T1 §N.7 | §7.2 |
 | `mitigant_cash_sweep` | `YN_2` | — | | T1 §N.7 | §7.2 |
 | `mitigant_committed_refi` | `YN_2` | — | | T1 §N.7 | §7.2 |
@@ -1537,7 +1537,7 @@ Downstream references to Section 9 must be updated. The engine, both templates, 
 | `project_state` | `PROJ_STATE_3` | — | | T1 §N.8 | §7.3 |
 | `epc_structure` | `EPC_3` | — | | T1 §N.8 | §7.3 |
 | `contractor_standing` | `CONTR_3` | — | | T1 §N.8 | §7.3 |
-| `contingency_share` | number | frac | | T1 §N.8 | §7.3 |
+| `contingency_share` | number | frac | | T1 §N.8 | §7.3 (legitimately null: only relevant pre-COD — CORE Section 3.3.1 row 3; the engine treats a missing value as 0.0) |
 | `execution_complexity` | `EXEC_3` | — | | T1 §N.8 | §7.3 |
 
 ## 15.7 Engine outputs

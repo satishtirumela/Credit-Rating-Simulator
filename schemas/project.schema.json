@@ -2,9 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/satishtirumela/Credit-Rating-Simulator/schemas/project.schema.json",
   "title": "Credit Rating Simulator \u2014 Project Input",
-  "description": "Derived from Core Rating Criteria v3.0, Appendix A (Section 14, enumerations) and Appendix B (Section 15, field dictionary), by parsing them. Not hand-transcribed. Regenerate with build_schema.py whenever CORE changes. EVERY PERCENTAGE IS A DECIMAL FRACTION (CORE Section 9.6). Enumerated values are matched on CODE, never on display text (CORE Section 14).",
+  "description": "Derived from Core Rating Criteria v3.0, Appendix A (Section 14, enumerations) and Appendix B (Section 15, field dictionary). Hand-authored directly from those sections — there is no executable generator; keep this file consistent with CORE Appendix A/B by hand whenever either changes. EVERY PERCENTAGE IS A DECIMAL FRACTION (CORE Section 9.6). Enumerated values are matched on CODE, never on display text (CORE Section 14).",
   "x-core-version": "3.0",
-  "x-generated-by": "build_schema.py",
   "type": "object",
   "additionalProperties": false,
   "required": [
