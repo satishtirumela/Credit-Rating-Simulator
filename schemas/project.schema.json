@@ -29,19 +29,19 @@
       "description": "Decimal fraction, NOT a percentage out of 100. 0.9700 means 97% (CORE Section 9.6). No upper bound is imposed: a share cannot exceed 1, but a ratio expressed as a fraction can - actual_gen_vs_p90_* legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate. Range rules that depend on the field are enforced by the engine, not by this schema."
     },
     "actual_gen_vs_p90_y1": {
-      "type": "number",
+      "type": ["number", "null"],
       "minimum": 0,
-      "description": "Decimal fraction, NOT a percentage out of 100. 0.9700 means 97% (CORE Section 9.6). No upper bound is imposed: a share cannot exceed 1, but a ratio expressed as a fraction can - actual_gen_vs_p90_* legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate. Range rules that depend on the field are enforced by the engine, not by this schema."
+      "description": "Decimal fraction, NOT a percentage out of 100. 0.9700 means 97% (CORE Section 9.6). No upper bound is imposed: a share cannot exceed 1, but a ratio expressed as a fraction can - actual_gen_vs_p90_* legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate. Range rules that depend on the field are enforced by the engine, not by this schema. Legitimately null for projects with fewer than 3 years of operating history."
     },
     "actual_gen_vs_p90_y2": {
-      "type": "number",
+      "type": ["number", "null"],
       "minimum": 0,
-      "description": "Decimal fraction, NOT a percentage out of 100. 0.9700 means 97% (CORE Section 9.6). No upper bound is imposed: a share cannot exceed 1, but a ratio expressed as a fraction can - actual_gen_vs_p90_* legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate. Range rules that depend on the field are enforced by the engine, not by this schema."
+      "description": "Decimal fraction, NOT a percentage out of 100. 0.9700 means 97% (CORE Section 9.6). No upper bound is imposed: a share cannot exceed 1, but a ratio expressed as a fraction can - actual_gen_vs_p90_* legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate. Range rules that depend on the field are enforced by the engine, not by this schema. Legitimately null for projects with fewer than 3 years of operating history."
     },
     "actual_gen_vs_p90_y3": {
-      "type": "number",
+      "type": ["number", "null"],
       "minimum": 0,
-      "description": "Decimal fraction, NOT a percentage out of 100. 0.9700 means 97% (CORE Section 9.6). No upper bound is imposed: a share cannot exceed 1, but a ratio expressed as a fraction can - actual_gen_vs_p90_* legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate. Range rules that depend on the field are enforced by the engine, not by this schema."
+      "description": "Decimal fraction, NOT a percentage out of 100. 0.9700 means 97% (CORE Section 9.6). No upper bound is imposed: a share cannot exceed 1, but a ratio expressed as a fraction can - actual_gen_vs_p90_* legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate. Range rules that depend on the field are enforced by the engine, not by this schema. Legitimately null for projects with fewer than 3 years of operating history."
     },
     "almm_basis_reference": {
       "type": "string"
@@ -60,9 +60,9 @@
       "type": "string"
     },
     "average_dscr": {
-      "type": "number",
+      "type": ["number", "null"],
       "minimum": 0,
-      "description": "Ratio multiple, e.g. 1.3400"
+      "description": "Ratio multiple, e.g. 1.3400. Legitimately null when dscr_schedule is supplied instead (CORE Section 9.8.1 permits this as an alternative)."
     },
     "avg_monthly_debt_service": {
       "type": "number",
@@ -109,9 +109,9 @@
       "description": "Competitive and essentiality position (\u00a73.1.1) (CORE Appendix A `COMP_POS_5`)"
     },
     "contingency_share": {
-      "type": "number",
+      "type": ["number", "null"],
       "minimum": 0,
-      "description": "Decimal fraction, NOT a percentage out of 100. 0.9700 means 97% (CORE Section 9.6). No upper bound is imposed: a share cannot exceed 1, but a ratio expressed as a fraction can - actual_gen_vs_p90_* legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate. Range rules that depend on the field are enforced by the engine, not by this schema."
+      "description": "Decimal fraction, NOT a percentage out of 100. 0.9700 means 97% (CORE Section 9.6). No upper bound is imposed: a share cannot exceed 1, but a ratio expressed as a fraction can - actual_gen_vs_p90_* legitimately exceeds 1.0000 whenever a project outperforms its P90 estimate. Range rules that depend on the field are enforced by the engine, not by this schema. Legitimately null: only relevant pre-COD (CORE Section 3.3.1 row 3); the engine treats a missing value as 0.0 (app/engine/scoring.py)."
     },
     "contracted_revenue_share": {
       "type": "number",
@@ -325,14 +325,14 @@
       "description": "Individual permitting status (\u00a73.1.2, three instances) (CORE Appendix A `PERMIT_3`)"
     },
     "lockup_dscr_threshold": {
-      "type": "number",
+      "type": ["number", "null"],
       "minimum": 0,
-      "description": "Ratio multiple, e.g. 1.3400"
+      "description": "Ratio multiple, e.g. 1.3400. Legitimately null unless distribution_lockup == \"YES\"."
     },
     "minimum_dscr": {
-      "type": "number",
+      "type": ["number", "null"],
       "minimum": 0,
-      "description": "Ratio multiple, e.g. 1.3400"
+      "description": "Ratio multiple, e.g. 1.3400. Legitimately null when dscr_schedule is supplied instead (CORE Section 9.8.1 permits this as an alternative)."
     },
     "mitigant_cash_sweep": {
       "enum": [
@@ -462,9 +462,10 @@
         "CP_STRONG",
         "CP_ADEQUATE",
         "CP_WEAK",
-        "CP_POOR_UNRATED"
+        "CP_POOR_UNRATED",
+        null
       ],
-      "description": "OFFTAKER_TYPE_2 (CORE Appendix A `COUNTERPARTY_4`)"
+      "description": "OFFTAKER_TYPE_2 (CORE Appendix A `COUNTERPARTY_4`). Legitimately null when not applicable."
     },
     "p90_attestation": {
       "type": "object",
