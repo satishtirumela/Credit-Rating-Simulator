@@ -1,18 +1,22 @@
 """
 End-to-End Approved Assessment Pipeline Orchestrator.
-Chains: Score -> Ground -> Draft -> QA -> Report & Persist upon Human Approval.
+Chains: Score -> Draft -> Ground -> QA -> Report & Persist upon Human Approval.
 Strict Engine/Model Boundary:
 - Python engine (score_project) handles 100% of numeric scores, bands, caps, and confidence.
 - Rationale narrative drafting (draft_rationale) is deterministic Python string templating over
   the score_project() result dict -- not a Gemini/LLM call. Its citations come from
   get_grounded_methodology_citations(), a static, technology-branched lookup table, not an LLM
-  call or a retrieval index. Gemini is used elsewhere in this codebase (app/extraction.py) only
-  for document extraction (Template 1/2 -> project JSON), unrelated to rationale drafting.
+  call or a retrieval index. Those citations are then mechanically re-verified in place by
+  verify_methodology_citations() (app/grounding.py) against the real corpus PDFs before being
+  attached to the returned rationale -- it verifies draft_rationale()'s own citations, it does
+  not substitute a separate fixed catalog. Gemini is used elsewhere in this codebase
+  (app/extraction.py) only for document extraction (Template 1/2 -> project JSON), unrelated to
+  rationale drafting.
 """
 
 from typing import Dict, Any
 from app.engine.scoring import score_project
-from app.grounding import get_verified_methodology_citations
+from app.grounding import verify_methodology_citations
 from app.rationale.draft import draft_rationale
 from app.pdf import generate_rationale_pdf
 from app.firestore import approve_project_document, save_score_document
@@ -36,7 +40,12 @@ def qa_review_assessment(score_result: Dict[str, Any], rationale: Dict[str, Any]
         flags.append("MANDATORY_QA_REVIEW_REQUIRED: Final rating band is in C/D deep speculative range.")
 
     citations = rationale.get("citations", [])
-    coherent = (final_band == "Not Rated" and len(citations) == 0) or (len(citations) == 3 and all(c.get("claim") for c in citations))
+    coherent = (final_band == "Not Rated" and len(citations) == 0) or (
+        final_band != "Not Rated" and len(citations) > 0 and all(
+            c.get("claim") and c.get("source_document") and c.get("grounding_status") == "VERIFIED_VERBATIM"
+            for c in citations
+        )
+    )
     if not coherent:
         flags.append("CITATION_COHERENCE_WARNING: Methodology citations count or claim text incomplete.")
 
@@ -51,9 +60,11 @@ def run_approved_assessment_pipeline(project_id: str, approved_data: Dict[str, A
     """
     Executes Phase 2 of the credit rating pipeline upon explicit human approval:
     1. Score (includes all 5 validation stages in Python engine).
-    2. Ground (verifies verbatim methodology quotes via manifest SHA-256).
-    3. Draft (deterministic narrative generation from the score_project() result dict, with
-       citations from a static, technology-branched lookup -- no Gemini/LLM call).
+    2. Draft (deterministic narrative generation from the score_project() result dict, with
+       citations from draft_rationale()'s own technology-branched lookup -- no Gemini/LLM call).
+    3. Ground (mechanically verifies each of draft_rationale()'s own citations -- not a separate
+       static catalog -- as a verbatim substring of its claimed corpus PDF, via manifest SHA-256
+       + PdfReader extraction; raises RuntimeError on any citation that fails, propagated as-is).
     4. QA (executes automated QA review pass).
     5. Report & Save (generates ReportLab PDF & saves to Cloud Firestore).
     """
@@ -62,16 +73,15 @@ def run_approved_assessment_pipeline(project_id: str, approved_data: Dict[str, A
 
     final_band = score_result.get("final_band")
 
-    # 2. GROUND & 3. DRAFT
+    # 2. DRAFT & 3. GROUND
     if final_band == "Not Rated":
         # For Stage 1 "Not Rated" exits, skip Ground/Draft citation attachment entirely
         rationale_result = draft_rationale(approved_data, score_result)
         rationale_result["citations"] = []
         score_result["rationale"] = rationale_result
     else:
-        verified_citations = get_verified_methodology_citations()
         rationale_result = draft_rationale(approved_data, score_result)
-        rationale_result["citations"] = verified_citations
+        rationale_result["citations"] = verify_methodology_citations(rationale_result["citations"])
         score_result["rationale"] = rationale_result
 
     # 4. QA REVIEW

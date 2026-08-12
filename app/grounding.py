@@ -14,31 +14,6 @@ from pypdf import PdfReader
 CORPUS_DIR = os.path.join(os.path.dirname(__file__), "..", "corpus")
 MANIFEST_PATH = os.path.join(CORPUS_DIR, "Reference_Corpus_Manifest_v3_0.csv")
 
-# Exact verbatim methodology quotes extracted directly from verified PDFs
-VERBATIM_CITATIONS_CATALOG = [
-    {
-        "source_document": "CARE Criteria for Infrastructure Sector Ratings (Mar 2025)",
-        "source_section": "Section 4 — Operational & Cash Flow Stability",
-        "publisher": "CARE Ratings",
-        "filename": "CARE_Criteria_for_Infrastructure_Sector_Ratings_Mar_2025.pdf",
-        "claim": "debt service reserve account (DSRA), among others, provide liquidity support."
-    },
-    {
-        "source_document": "Crisil Ratings Criteria for Infrastructure Sectors",
-        "source_section": "Section 6 — Capital Structure & Financial Risk",
-        "publisher": "Crisil Ratings",
-        "filename": "Crisil_Ratings_Criteria_for_Infrastructure_sectors.pdf",
-        "claim": "rating is calculated based on project cash flows only i.e., without considering parent support or DSRA."
-    },
-    {
-        "source_document": "CARE Ratings Methodology — Wind Power Projects (Dec 2024)",
-        "source_section": "Section 3 — Tariff Competitiveness & Generation Assessment",
-        "publisher": "CARE Ratings",
-        "filename": "CARE_Ratings_Methodology_Wind_Power_Projects_December_2024.pdf",
-        "claim": "The agency conducting the resource assessment study typically provides power generation estimates for the given site at three probability of confidence levels, P -50, P-75, and P-90, whereby the P-90 level is considered to be the most conservative estimate."
-    }
-]
-
 
 def clean_display_text(text: str) -> str:
     """
@@ -114,15 +89,18 @@ def verify_manifest_file(filename: str) -> bool:
     return True
 
 
-def get_verified_methodology_citations() -> List[Dict[str, str]]:
+def verify_methodology_citations(citations: List[Dict[str, str]]) -> List[Dict[str, str]]:
     """
-    Mechanically verifies and returns the exact verbatim methodology citations catalog.
-    Checks PDF existence, SHA-256 manifest integrity, and 100% exact substring matching.
-    Attaches clean_display_text for UI/PDF display.
+    Mechanically verifies a given list of citations -- as produced by draft.py's
+    get_grounded_methodology_citations(), keyed by "claim" and "source_document" (the literal
+    corpus PDF filename) -- against the real corpus. Checks PDF existence, SHA-256 manifest
+    integrity, and 100% exact substring matching. Attaches clean_display_text for UI/PDF display.
+    Raises RuntimeError on the first citation whose claim is not a verbatim substring of its
+    source PDF -- callers must not catch this to silently drop or downgrade a failed citation.
     """
     verified = []
-    for cit in VERBATIM_CITATIONS_CATALOG:
-        fname = cit["filename"]
+    for cit in citations:
+        fname = cit["source_document"]
         fpath = os.path.join(CORPUS_DIR, fname)
 
         if not os.path.exists(fpath) or not verify_manifest_file(fname):
