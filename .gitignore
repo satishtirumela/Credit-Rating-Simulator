@@ -39,6 +39,9 @@ build/
 # ---- Local storage uploads ----
 storage_uploads/
 
+# ---- Local diagnostic output (not part of the codebase) ----
+diagnostics/
+
 # ---- OS / editor ----
 .DS_Store
 Thumbs.db

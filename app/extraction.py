@@ -49,38 +49,37 @@ def save_to_firestore(project_id: str, extracted_data: Dict[str, Any]) -> Dict[s
     Saves extracted project JSON to Firestore under collection 'projects', document {project_id}.
     Falls back to local file storage if Firestore credentials are uninitialized.
     """
+    from app.firestore import get_firestore_client_or_none
+
     safe_pid = project_id.strip() or "default_project"
     record = {
         "project_id": safe_pid,
         "extracted_data": extracted_data,
     }
 
-    try:
-        import firebase_admin
-        from firebase_admin import credentials, firestore
+    db = get_firestore_client_or_none()
+    if db is not None:
+        try:
+            from firebase_admin import firestore
+            doc_ref = db.collection("projects").document(safe_pid)
+            doc_ref.set({
+                "project_id": safe_pid,
+                "extracted_data": extracted_data,
+                "updated_at": firestore.SERVER_TIMESTAMP
+            }, merge=True)
+            return {"status": "saved", "provider": "firestore", "document_path": f"projects/{safe_pid}"}
+        except Exception as err:
+            local_cache_path = os.path.join(os.path.dirname(__file__), "..", "storage_uploads", f"firestore_{safe_pid}.json")
+            os.makedirs(os.path.dirname(local_cache_path), exist_ok=True)
+            with open(local_cache_path, "w", encoding="utf-8") as f:
+                json.dump(record, f, indent=2)
+            return {"status": "saved", "provider": f"local (firestore fallback: {str(err)})", "local_file": local_cache_path}
 
-        if not firebase_admin._apps:
-            cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or os.getenv("FIREBASE_SERVICE_ACCOUNT")
-            if cred_path and os.path.exists(cred_path):
-                cred = credentials.Certificate(cred_path)
-                firebase_admin.initialize_app(cred)
-            else:
-                firebase_admin.initialize_app()
-
-        db = firestore.client()
-        doc_ref = db.collection("projects").document(safe_pid)
-        doc_ref.set({
-            "project_id": safe_pid,
-            "extracted_data": extracted_data,
-            "updated_at": firestore.SERVER_TIMESTAMP
-        }, merge=True)
-        return {"status": "saved", "provider": "firestore", "document_path": f"projects/{safe_pid}"}
-    except Exception as err:
-        local_cache_path = os.path.join(os.path.dirname(__file__), "..", "storage_uploads", f"firestore_{safe_pid}.json")
-        os.makedirs(os.path.dirname(local_cache_path), exist_ok=True)
-        with open(local_cache_path, "w", encoding="utf-8") as f:
-            json.dump(record, f, indent=2)
-        return {"status": "saved", "provider": f"local (firestore fallback: {str(err)})", "local_file": local_cache_path}
+    local_cache_path = os.path.join(os.path.dirname(__file__), "..", "storage_uploads", f"firestore_{safe_pid}.json")
+    os.makedirs(os.path.dirname(local_cache_path), exist_ok=True)
+    with open(local_cache_path, "w", encoding="utf-8") as f:
+        json.dump(record, f, indent=2)
+    return {"status": "saved", "provider": "local (firestore guard active)", "local_file": local_cache_path}
 
 
 def _extract_docx_text(docx_bytes: bytes) -> str:

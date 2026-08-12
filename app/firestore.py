@@ -14,6 +14,62 @@ load_dotenv()
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "storage_uploads")
 
+_guard_logged = False
+
+
+def _firestore_guard_reason() -> Optional[str]:
+    """
+    Returns the trigger reason if the test/diagnostic guard should force the local JSON
+    fallback instead of real Firestore, else None. Checked before any real Firestore
+    initialization is attempted, so a guarded process never touches production data.
+    """
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        return "PYTEST_CURRENT_TEST detected"
+    if os.getenv("CRS_FORCE_LOCAL_FIRESTORE", "").strip().lower() in ("1", "true", "yes", "on"):
+        return "CRS_FORCE_LOCAL_FIRESTORE set"
+    return None
+
+
+def get_firestore_client_or_none():
+    """
+    Centralized Firestore client resolution used by every read/write function in this module
+    and by app.extraction.save_to_firestore. Returns a real firebase_admin firestore client when
+    genuine credentials are configured and no guard condition is active; returns None otherwise,
+    signaling every caller to use the local JSON fallback for both reads and writes -- a guarded
+    process never talks to real Firestore at all, for either direction.
+
+    Guard conditions (checked first, before any real Firestore initialization is attempted):
+    1. PYTEST_CURRENT_TEST is set -- pytest sets this automatically for every test, zero config.
+    2. CRS_FORCE_LOCAL_FIRESTORE is set to a truthy value -- explicit opt-in for ad-hoc diagnostic
+       scripts that must not risk touching real production data. Deliberately not named around
+       "diagnostic mode" -- some diagnostic scripts (e.g. a Firestore staleness audit) legitimately
+       need to read real Firestore, so the flag name describes the protection applied, not the
+       general activity being performed.
+    """
+    global _guard_logged
+    reason = _firestore_guard_reason()
+    if reason:
+        if not _guard_logged:
+            print(f"[CRS] Firestore guard active — routing to local fallback (reason: {reason})")
+            _guard_logged = True
+        return None
+
+    try:
+        import firebase_admin
+        from firebase_admin import credentials, firestore
+
+        if not firebase_admin._apps:
+            cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or os.getenv("FIREBASE_SERVICE_ACCOUNT")
+            if cred_path and os.path.exists(cred_path):
+                cred = credentials.Certificate(cred_path)
+                firebase_admin.initialize_app(cred)
+            else:
+                firebase_admin.initialize_app()
+
+        return firestore.client()
+    except Exception:
+        return None
+
 
 def normalize_value(val: Any) -> Any:
     """
@@ -84,26 +140,16 @@ def get_project_document(project_id: str) -> Dict[str, Any]:
     """
     safe_pid = project_id.strip() or "default_project"
 
-    try:
-        import firebase_admin
-        from firebase_admin import credentials, firestore
-
-        if not firebase_admin._apps:
-            cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or os.getenv("FIREBASE_SERVICE_ACCOUNT")
-            if cred_path and os.path.exists(cred_path):
-                cred = credentials.Certificate(cred_path)
-                firebase_admin.initialize_app(cred)
-            else:
-                firebase_admin.initialize_app()
-
-        db = firestore.client()
-        doc = db.collection("projects").document(safe_pid).get()
-        if doc.exists:
-            data = doc.to_dict()
-            data["_id"] = doc.id
-            return data
-    except Exception as err:
-        print(f"[FIRESTORE WARNING] Failed to query Firestore document for '{safe_pid}': {str(e if 'e' in locals() else err)}. Trying local fallback.")
+    db = get_firestore_client_or_none()
+    if db is not None:
+        try:
+            doc = db.collection("projects").document(safe_pid).get()
+            if doc.exists:
+                data = doc.to_dict()
+                data["_id"] = doc.id
+                return data
+        except Exception as err:
+            print(f"[FIRESTORE WARNING] Failed to query Firestore document for '{safe_pid}': {err}. Trying local fallback.")
 
     # Local fallback file
     local_path = os.path.join(UPLOAD_DIR, f"firestore_{safe_pid}.json")
@@ -125,28 +171,18 @@ def get_all_projects_from_firestore() -> List[Dict[str, Any]]:
     Returns a list of all project documents stored in Cloud Firestore (or local file fallback).
     """
     projects = []
-    try:
-        import firebase_admin
-        from firebase_admin import credentials, firestore
-
-        if not firebase_admin._apps:
-            cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or os.getenv("FIREBASE_SERVICE_ACCOUNT")
-            if cred_path and os.path.exists(cred_path):
-                cred = credentials.Certificate(cred_path)
-                firebase_admin.initialize_app(cred)
-            else:
-                firebase_admin.initialize_app()
-
-        db = firestore.client()
-        docs = db.collection("projects").stream()
-        for doc in docs:
-            p_data = doc.to_dict()
-            p_data["project_id"] = doc.id
-            projects.append(p_data)
-        if projects:
-            return projects
-    except Exception:
-        pass
+    db = get_firestore_client_or_none()
+    if db is not None:
+        try:
+            docs = db.collection("projects").stream()
+            for doc in docs:
+                p_data = doc.to_dict()
+                p_data["project_id"] = doc.id
+                projects.append(p_data)
+            if projects:
+                return projects
+        except Exception:
+            pass
 
     # Local fallback
     if os.path.exists(UPLOAD_DIR):
@@ -173,53 +209,46 @@ def approve_project_document(project_id: str, approved_data: Dict[str, Any]) -> 
     extracted_data = doc_data.get("extracted_data", {})
     provenance = compute_field_provenance(extracted_data, approved_data)
 
-    try:
-        import firebase_admin
-        from firebase_admin import credentials, firestore
+    db = get_firestore_client_or_none()
+    if db is not None:
+        try:
+            from firebase_admin import firestore
+            doc_ref = db.collection("projects").document(safe_pid)
 
-        if not firebase_admin._apps:
-            cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or os.getenv("FIREBASE_SERVICE_ACCOUNT")
-            if cred_path and os.path.exists(cred_path):
-                cred = credentials.Certificate(cred_path)
-                firebase_admin.initialize_app(cred)
-            else:
-                firebase_admin.initialize_app()
+            update_payload = {
+                "project_id": safe_pid,
+                "approved_data": approved_data,
+                "field_provenance": provenance,
+                "status": "approved",
+                "approved_at": firestore.SERVER_TIMESTAMP
+            }
+            doc_ref.set(update_payload, merge=True)
+            return {
+                "status": "success",
+                "message": f"Successfully approved project '{safe_pid}'",
+                "project_id": safe_pid,
+                "field_provenance": provenance,
+                "approved_data": approved_data
+            }
+        except Exception:
+            pass  # fall through to local fallback below
 
-        db = firestore.client()
-        doc_ref = db.collection("projects").document(safe_pid)
-
-        update_payload = {
-            "project_id": safe_pid,
-            "approved_data": approved_data,
-            "field_provenance": provenance,
-            "status": "approved",
-            "approved_at": firestore.SERVER_TIMESTAMP
-        }
-        doc_ref.set(update_payload, merge=True)
-        return {
-            "status": "success",
-            "message": f"Successfully approved project '{safe_pid}'",
-            "project_id": safe_pid,
-            "field_provenance": provenance,
-            "approved_data": approved_data
-        }
-    except Exception as err:
-        # Fallback local update
-        local_path = os.path.join(UPLOAD_DIR, f"firestore_{safe_pid}.json")
-        doc_data["approved_data"] = approved_data
-        doc_data["field_provenance"] = provenance
-        doc_data["status"] = "approved"
-        doc_data["approved_at"] = "local_timestamp"
-        os.makedirs(os.path.dirname(local_path), exist_ok=True)
-        with open(local_path, "w", encoding="utf-8") as f:
-            json.dump(doc_data, f, indent=2, default=str)
-        return {
-            "status": "success",
-            "message": f"Successfully approved project '{safe_pid}' (local fallback)",
-            "project_id": safe_pid,
-            "field_provenance": provenance,
-            "approved_data": approved_data
-        }
+    # Local fallback update
+    local_path = os.path.join(UPLOAD_DIR, f"firestore_{safe_pid}.json")
+    doc_data["approved_data"] = approved_data
+    doc_data["field_provenance"] = provenance
+    doc_data["status"] = "approved"
+    doc_data["approved_at"] = "local_timestamp"
+    os.makedirs(os.path.dirname(local_path), exist_ok=True)
+    with open(local_path, "w", encoding="utf-8") as f:
+        json.dump(doc_data, f, indent=2, default=str)
+    return {
+        "status": "success",
+        "message": f"Successfully approved project '{safe_pid}' (local fallback)",
+        "project_id": safe_pid,
+        "field_provenance": provenance,
+        "approved_data": approved_data
+    }
 
 
 def save_score_document(project_id: str, score_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -230,32 +259,25 @@ def save_score_document(project_id: str, score_data: Dict[str, Any]) -> Dict[str
     safe_pid = project_id.strip() or "default_project"
     doc_data = get_project_document(safe_pid)
 
-    try:
-        import firebase_admin
-        from firebase_admin import credentials, firestore
+    db = get_firestore_client_or_none()
+    if db is not None:
+        try:
+            from firebase_admin import firestore
+            doc_ref = db.collection("projects").document(safe_pid)
 
-        if not firebase_admin._apps:
-            cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or os.getenv("FIREBASE_SERVICE_ACCOUNT")
-            if cred_path and os.path.exists(cred_path):
-                cred = credentials.Certificate(cred_path)
-                firebase_admin.initialize_app(cred)
-            else:
-                firebase_admin.initialize_app()
+            update_payload = {
+                "score": score_data,
+                "scored_at": firestore.SERVER_TIMESTAMP
+            }
+            doc_ref.set(update_payload, merge=True)
+            return {"status": "success", "project_id": safe_pid}
+        except Exception:
+            pass  # fall through to local fallback below
 
-        db = firestore.client()
-        doc_ref = db.collection("projects").document(safe_pid)
-
-        update_payload = {
-            "score": score_data,
-            "scored_at": firestore.SERVER_TIMESTAMP
-        }
-        doc_ref.set(update_payload, merge=True)
-        return {"status": "success", "project_id": safe_pid}
-    except Exception as err:
-        local_path = os.path.join(UPLOAD_DIR, f"firestore_{safe_pid}.json")
-        doc_data["score"] = score_data
-        doc_data["scored_at"] = datetime.now(timezone.utc).isoformat()
-        os.makedirs(os.path.dirname(local_path), exist_ok=True)
-        with open(local_path, "w", encoding="utf-8") as f:
-            json.dump(doc_data, f, indent=2, default=str)
-        return {"status": "success", "project_id": safe_pid}
+    local_path = os.path.join(UPLOAD_DIR, f"firestore_{safe_pid}.json")
+    doc_data["score"] = score_data
+    doc_data["scored_at"] = datetime.now(timezone.utc).isoformat()
+    os.makedirs(os.path.dirname(local_path), exist_ok=True)
+    with open(local_path, "w", encoding="utf-8") as f:
+        json.dump(doc_data, f, indent=2, default=str)
+    return {"status": "success", "project_id": safe_pid}
