@@ -7,6 +7,7 @@ import os
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
+from conftest import to_schema_conformant_inputs
 
 client = TestClient(app)
 
@@ -109,7 +110,7 @@ def test_approve_and_score_flow():
 
     try:
         # 2. User modifies project_name
-        approved_payload = dict(tp2_inputs)
+        approved_payload = to_schema_conformant_inputs(tp2_inputs)
         approved_payload["project_name"] = "User Corrected Name"
 
         # 3. POST /api/projects/TP-TEST-REVIEW/approve
@@ -144,7 +145,7 @@ def test_approved_pipeline_flow():
 
     try:
         # 2. Approve project via POST /api/projects/TP-TEST-PIPELINE/approve
-        approved_payload = dict(tp2_inputs)
+        approved_payload = to_schema_conformant_inputs(tp2_inputs)
         approved_payload["project_name"] = "Pipeline Test Project Name"
 
         res = client.post("/api/projects/TP-TEST-PIPELINE/approve", json=approved_payload)
@@ -187,7 +188,8 @@ def test_download_rationale_pdf_endpoint():
     save_to_firestore(project_id, tp2_inputs)
 
     try:
-        approve_res = client.post(f"/api/projects/{project_id}/approve", json=tp2_inputs)
+        approved_payload = to_schema_conformant_inputs(tp2_inputs)
+        approve_res = client.post(f"/api/projects/{project_id}/approve", json=approved_payload)
         assert approve_res.status_code == 200
 
         response = client.get(f"/api/projects/{project_id}/download-rationale")
@@ -290,37 +292,42 @@ def test_results_endpoint_content_assertions():
 def test_results_screen_rendered_playwright():
     """
     Playwright browser test: renders results.html in headless browser against live server
-    to verify rendered DOM text for uncapped (TP-4 profile), capped (NEG-CAP-1 profile),
-    validation-blocked (TP-8 profile), and unrated (TP-7 profile) projects.
+    to verify rendered DOM text for uncapped (TP-4 profile), capped (NEG-CAP-1 profile), and
+    validation-blocked (TP-8 profile) projects.
 
     Runs against disposable TP-TEST-RESULTS-* ids carrying the same fixture input data as
-    the canonical TP-4/NEG-CAP-1/TP-8/TP-7 documents, rather than the canonical ids
-    themselves -- every assertion below is driven entirely by the input data (band/cap/
-    validation-outcome text), never by the literal project id, so this is a like-for-like
-    substitution. The canonical documents must never be mutated by running this suite;
-    approving/scoring live reference documents on every test run silently overwrites their
-    approved_at/scored_at with a spurious new timestamp.
+    the canonical TP-4/NEG-CAP-1/TP-8 documents, rather than the canonical ids themselves --
+    every assertion below is driven entirely by the input data (band/cap/validation-outcome
+    text), never by the literal project id, so this is a like-for-like substitution. The
+    canonical documents must never be mutated by running this suite; approving/scoring live
+    reference documents on every test run silently overwrites their approved_at/scored_at
+    with a spurious new timestamp.
+
+    TP-7's critical-null render path is intentionally not exercised here: TP-7's fixture has
+    technology_type == null by design (that's the scenario under test), but technology_type
+    is a required, non-nullable field in schemas/project.schema.json, so a schema-conformant
+    TP-7 payload cannot exist -- approve_project_document()'s schema-validation gate would
+    reject it before the pipeline ever reaches /results. That render path stays covered by
+    test_results_endpoint_content_assertions, which exercises TP-7 via POST /score directly
+    (a path with no schema gate), not via the approve pipeline.
     """
     from playwright.sync_api import sync_playwright
     from app.pipeline import run_approved_assessment_pipeline
 
-    tp4_inputs = next(p["inputs"] for p in PROJECTS if p["id"] == "TP-4")
-    neg_cap_1_inputs = next(p["inputs"] for p in PROJECTS if p["id"] == "NEG-CAP-1")
-    tp8_inputs = next(p["inputs"] for p in PROJECTS if p["id"] == "TP-8")
-    tp7_inputs = next(p["inputs"] for p in PROJECTS if p["id"] == "TP-7")
+    tp4_inputs = to_schema_conformant_inputs(next(p["inputs"] for p in PROJECTS if p["id"] == "TP-4"))
+    neg_cap_1_inputs = to_schema_conformant_inputs(next(p["inputs"] for p in PROJECTS if p["id"] == "NEG-CAP-1"))
+    tp8_inputs = to_schema_conformant_inputs(next(p["inputs"] for p in PROJECTS if p["id"] == "TP-8"))
 
     test_ids = {
         "tp4": "TP-TEST-RESULTS-TP4",
         "neg_cap_1": "TP-TEST-RESULTS-NEGCAP1",
         "tp8": "TP-TEST-RESULTS-TP8",
-        "tp7": "TP-TEST-RESULTS-TP7",
     }
 
     try:
         run_approved_assessment_pipeline(test_ids["tp4"], tp4_inputs)
         run_approved_assessment_pipeline(test_ids["neg_cap_1"], neg_cap_1_inputs)
         run_approved_assessment_pipeline(test_ids["tp8"], tp8_inputs)
-        run_approved_assessment_pipeline(test_ids["tp7"], tp7_inputs)
 
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -349,12 +356,6 @@ def test_results_screen_rendered_playwright():
             tp8_text = page.inner_text("body")
             assert "Validation Block — Not Rated" in tp8_text
             assert "Validation Block Triggered — V1: Average DSCR 1.1000 < Minimum DSCR 1.2000" in tp8_text
-
-            # 4. Render Critical Null Project TP-7 profile
-            page.goto(f"http://127.0.0.1:8000/results/{test_ids['tp7']}", wait_until="networkidle")
-            tp7_text = page.inner_text("body")
-            assert "Insufficient Input — Not Rated" in tp7_text
-            assert "Critical Blocking Null" in tp7_text
 
             browser.close()
     finally:
@@ -469,7 +470,7 @@ def test_scored_at_refreshes_on_each_score_persist():
     from app.firestore import get_project_document
 
     project_id = "SCORED-AT-REFRESH-TEST"
-    tp1_inputs = dict(next(p["inputs"] for p in PROJECTS if p["id"] == "TP-1"))
+    tp1_inputs = to_schema_conformant_inputs(next(p["inputs"] for p in PROJECTS if p["id"] == "TP-1"))
 
     try:
         run_approved_assessment_pipeline(project_id, tp1_inputs)
