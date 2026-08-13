@@ -400,7 +400,10 @@ def approve_project_api(project_id: str, approved_data: Dict[str, Any] = Body(..
     if not approved_data or not isinstance(approved_data, dict):
         raise HTTPException(status_code=400, detail="Invalid request body: expected JSON object")
     from app.pipeline import run_approved_assessment_pipeline
-    return run_approved_assessment_pipeline(project_id, approved_data)
+    try:
+        return run_approved_assessment_pipeline(project_id, approved_data)
+    except jsonschema.ValidationError as err:
+        raise HTTPException(status_code=422, detail=f"JSON Schema Validation Error: {err.message}")
 
 
 @app.post("/api/projects/{project_id}/score")

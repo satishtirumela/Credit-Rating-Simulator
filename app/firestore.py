@@ -9,10 +9,22 @@ import os
 from datetime import datetime, timezone
 from typing import Dict, Any, Tuple, Optional, List
 from dotenv import load_dotenv
+import jsonschema
 
 load_dotenv()
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "storage_uploads")
+SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "..", "schemas", "project.schema.json")
+
+
+def _get_project_schema() -> Dict[str, Any]:
+    """Loads schemas/project.schema.json fresh on each call (no caching), matching the same
+    pattern app/main.py's _get_schema() already uses for the /score endpoint's validate_schema
+    flag."""
+    if os.path.exists(SCHEMA_PATH):
+        with open(SCHEMA_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
 
 _guard_logged = False
 
@@ -200,9 +212,20 @@ def get_all_projects_from_firestore() -> List[Dict[str, Any]]:
 
 def approve_project_document(project_id: str, approved_data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Computes leaf field provenance, saves approved_data, field_provenance, and status = "approved"
-    to Cloud Firestore under projects/{project_id}.
+    Validates approved_data against schemas/project.schema.json, computes leaf field
+    provenance, and saves approved_data, field_provenance, and status = "approved" to Cloud
+    Firestore under projects/{project_id}.
+
+    Raises jsonschema.ValidationError if approved_data does not conform to the schema. This
+    check runs before any Firestore read or write (including the local-fallback write path)
+    -- placed here, ahead of the try/except around the Firestore call below, so a validation
+    failure is never caught by that except and silently downgraded into a "successful" local
+    fallback write.
     """
+    schema = _get_project_schema()
+    if schema:
+        jsonschema.validate(instance=approved_data, schema=schema)
+
     safe_pid = project_id.strip() or "default_project"
     doc_data = get_project_document(safe_pid)
 
