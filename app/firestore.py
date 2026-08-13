@@ -245,7 +245,17 @@ def approve_project_document(project_id: str, approved_data: Dict[str, Any]) -> 
                 "status": "approved",
                 "approved_at": firestore.SERVER_TIMESTAMP
             }
-            doc_ref.set(update_payload, merge=True)
+            # set(..., merge=True) recursively merges nested map fields (approved_data,
+            # field_provenance) with whatever is already stored, so stale keys absent from
+            # this call's payload survive instead of being replaced -- confirmed directly
+            # against real Firestore. update() replaces each named top-level field (including
+            # nested maps) wholesale while leaving unnamed sibling fields (score, scored_at,
+            # extracted_data) untouched; it requires the document to already exist, so a
+            # brand-new project's first approval still needs set() to create it.
+            if doc_ref.get().exists:
+                doc_ref.update(update_payload)
+            else:
+                doc_ref.set(update_payload)
             return {
                 "status": "success",
                 "message": f"Successfully approved project '{safe_pid}'",
