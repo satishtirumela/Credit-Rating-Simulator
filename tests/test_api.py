@@ -84,7 +84,7 @@ def test_upload_api_endpoint():
 
 
 def test_review_screen_endpoint():
-    response = client.get("/review/TP-2-Mid-Wind")
+    response = client.get("/review/TP-2")
     assert response.status_code == 200
     assert "Project Input Review & Approval" in response.text
 
@@ -224,9 +224,12 @@ def test_results_endpoint_content_assertions():
     tp7_inputs = next(p["inputs"] for p in PROJECTS if p["id"] == "TP-7")
 
     # 1. Test TP-2 Results Screen & Score
-    res_tp2_html = client.get("/results/TP-2-Mid-Wind")
+    res_tp2_html = client.get("/results/TP-2")
     assert res_tp2_html.status_code == 200
     assert "Credit Rating Assessment Results" in res_tp2_html.text
+    # Guard against a repeat of the null-data/id-mismatch bug: the page must
+    # actually render a computed band, not just the static template shell.
+    assert "BB" in res_tp2_html.text
 
     res_tp2_score = client.post("/score", json=tp2_inputs)
     assert res_tp2_score.status_code == 200

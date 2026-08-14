@@ -74,8 +74,10 @@ def get_display_labels() -> Dict[str, Any]:
 # Firestore", so a stray test/scratch document can never silently appear on the Home page
 # again (see this session's Firestore cleanup). TP-5/TP-6 are canonical CORE fixture ids but
 # have no live Firestore document yet; they're intentionally omitted below rather than shown
-# as fabricated placeholder rows.
-CANONICAL_PROJECT_IDS = ["TP-1", "TP-2", "TP-3", "TP-4", "TP-7", "TP-8", "NEG-CAP-1", "SolairePower", "TP-2-Mid-Wind"]
+# as fabricated placeholder rows. TP-2-Mid-Wind was retired from this list -- it had no
+# approved_data/extracted_data in Firestore, and the Home "View Benchmark" button now
+# points directly at TP-2, which does have a scored reference fixture.
+CANONICAL_PROJECT_IDS = ["TP-1", "TP-2", "TP-3", "TP-4", "TP-7", "TP-8", "NEG-CAP-1", "SolairePower"]
 
 
 @app.get("/", response_class=HTMLResponse)
