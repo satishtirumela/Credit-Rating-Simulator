@@ -80,7 +80,17 @@ def get_display_labels() -> Dict[str, Any]:
 # (identical fixture-derived data) as part of closing that gap. TP-2-Mid-Wind was retired from
 # this list -- it had no approved_data/extracted_data in Firestore, and the Home "View
 # Benchmark" button now points directly at TP-2, which does have a scored reference fixture.
-CANONICAL_PROJECT_IDS = ["TP-1", "TP-2", "TP-3", "TP-4", "TP-5", "TP-6", "TP-7", "TP-8", "NEG-CAP-1", "SolairePower"]
+#
+# The 4 space-named entries below (Suryagarh Solar, Vayu Wind, Trishul Hybrid, Vindhya
+# Hybrid) are fictional worked-example projects approved on 13 August 2026 via the real
+# upload -> Gemini extraction -> review -> /approve pipeline, not synthetic fixture JSON --
+# confirmed by extracted_data=True in Firestore, unlike the 9 CORE fixtures above which all
+# have extracted_data=False. They demonstrate the full application pipeline rather than a
+# specific CORE methodology edge case, and are tagged "Worked Example" on the Home page to
+# distinguish them from the CORE fixtures.
+WORKED_EXAMPLE_IDS = {"TP1 Suryagarh Solar", "TP2 Vayu Wind", "TP3 Trishul Hybrid", "TP4 Vindhya Hybrid"}
+CANONICAL_PROJECT_IDS = ["TP-1", "TP-2", "TP-3", "TP-4", "TP-5", "TP-6", "TP-7", "TP-8", "NEG-CAP-1",
+                          "TP1 Suryagarh Solar", "TP2 Vayu Wind", "TP3 Trishul Hybrid", "TP4 Vindhya Hybrid"]
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -135,9 +145,14 @@ def get_home_page():
             status_label = final_band
             status_class = "status-approved"
 
+        worked_example_badge = (
+            ' <span style="font-size:0.7rem;color:var(--ink-muted);border:1px solid var(--line);'
+            'border-radius:4px;padding:1px 6px;margin-left:8px;">Worked Example</span>'
+            if pid in WORKED_EXAMPLE_IDS else ""
+        )
         table_rows_html += f"""
         <tr>
-            <td><strong>{pid}</strong></td>
+            <td><strong>{pid}</strong>{worked_example_badge}</td>
             <td>{tech_label}</td>
             <td><span class="num">{capacity_label}</span></td>
             <td><span class="badge-status {status_class}">{status_label}</span></td>
