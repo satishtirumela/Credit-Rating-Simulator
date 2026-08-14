@@ -72,12 +72,15 @@ def get_display_labels() -> Dict[str, Any]:
 # The canonical reference project set for the Home screen's "Reference Projects & Saved
 # Assessments" table -- an explicit list, not "whatever documents currently exist in
 # Firestore", so a stray test/scratch document can never silently appear on the Home page
-# again (see this session's Firestore cleanup). TP-5/TP-6 are canonical CORE fixture ids but
-# have no live Firestore document yet; they're intentionally omitted below rather than shown
-# as fabricated placeholder rows. TP-2-Mid-Wind was retired from this list -- it had no
-# approved_data/extracted_data in Firestore, and the Home "View Benchmark" button now
-# points directly at TP-2, which does have a scored reference fixture.
-CANONICAL_PROJECT_IDS = ["TP-1", "TP-2", "TP-3", "TP-4", "TP-7", "TP-8", "NEG-CAP-1", "SolairePower"]
+# again (see this session's Firestore cleanup). TP-5 (Pre-COD Blend Wind) and TP-6
+# (Ramp-up Solar) were actually created in Firestore on 13 August 2026 during the G.4
+# schema-gate regeneration (see Remediation_Log_v2_0_to_v3_0.md, entry M1) -- this list was
+# simply never updated to reflect that, so they were silently omitted from the Home page for
+# five days despite having real, correct data. Re-verified and re-approved on 14 August 2026
+# (identical fixture-derived data) as part of closing that gap. TP-2-Mid-Wind was retired from
+# this list -- it had no approved_data/extracted_data in Firestore, and the Home "View
+# Benchmark" button now points directly at TP-2, which does have a scored reference fixture.
+CANONICAL_PROJECT_IDS = ["TP-1", "TP-2", "TP-3", "TP-4", "TP-5", "TP-6", "TP-7", "TP-8", "NEG-CAP-1", "SolairePower"]
 
 
 @app.get("/", response_class=HTMLResponse)
